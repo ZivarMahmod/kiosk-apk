@@ -6,15 +6,23 @@
   <title>Zivert Holms hörna</title>
   <style>
     :root {
-      --bg: #f0ebe0;
-      --paper: #fffbf2;
-      --ink: #1a1208;
-      --muted: #8a6a3a;
-      --accent: #3a2e1e;
-      --highlight: #c8523a;
-      --border: rgba(0,0,0,.08);
-      --shadow: 0 4px 16px rgba(0,0,0,.08);
+      --bg: linear-gradient(135deg,#0f0c29,#302b63,#24243e);
+      --surface: rgba(255,255,255,.06);
+      --surface-hover: rgba(255,255,255,.1);
+      --border: rgba(255,255,255,.08);
+      --text: #ffffff;
+      --text-muted: rgba(255,255,255,.5);
+      --accent: #6c63ff;
+      --accent2: #ffd966;
+      --highlight: rgba(108,99,255,.15);
+      --shadow: 0 4px 16px rgba(0,0,0,.3);
     }
+
+    @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+    @keyframes shimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}
+    @keyframes fadeSlideIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
+
     *, *::before, *::after {
       box-sizing: border-box;
       -webkit-tap-highlight-color: transparent;
@@ -24,8 +32,8 @@
       width: 100%; height: 100%;
       overflow: hidden;
       font-family: Georgia, "Times New Roman", serif;
-      color: var(--ink);
-      background: #d6cfc2;
+      color: var(--text);
+      background: #0a0820;
     }
     body {
       display: flex;
@@ -43,6 +51,7 @@
       align-items: center;
       justify-content: center;
       overflow: hidden;
+      background: linear-gradient(135deg,#0f0c29,#302b63,#24243e);
     }
     .stage {
       width: 1920px; height: 1080px;
@@ -57,30 +66,42 @@
       overflow: hidden;
       display: flex;
       flex-direction: column;
-      background: var(--bg);
+      background: linear-gradient(135deg,#0f0c29,#302b63,#24243e);
+      position: relative;
     }
+
+    /* ── Orbs ── */
+    .orb{position:absolute;border-radius:50%;filter:blur(80px);pointer-events:none;z-index:0;}
+    .orb1{width:500px;height:500px;background:rgba(108,99,255,.12);top:-100px;right:100px;}
+    .orb2{width:350px;height:350px;background:rgba(59,130,246,.08);bottom:-80px;left:150px;}
+    .orb3{width:250px;height:250px;background:rgba(255,180,0,.06);top:200px;left:300px;}
 
     /* ── Top bar ── */
     .top-bar {
       height: 52px;
-      background: #3a2e1e;
+      background: rgba(0,0,0,.4);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(255,255,255,.08);
       display: flex;
       align-items: center;
       justify-content: space-between;
       padding: 0 28px;
       flex-shrink: 0;
+      position: relative;
+      z-index: 2;
     }
     .top-bar-title {
       font-size: 38px;
       font-style: italic;
-      color: #f5ead0;
+      color: #fff;
       line-height: 1;
       letter-spacing: .2px;
     }
     .top-bar-hint {
-      font-size: 16px;
-      color: rgba(245,234,208,.55);
-      letter-spacing: 1.2px;
+      font-size: 14px;
+      color: rgba(255,255,255,.4);
+      letter-spacing: 2px;
       text-transform: uppercase;
     }
 
@@ -91,6 +112,8 @@
       display: grid;
       grid-template-columns: 1fr 380px;
       overflow: hidden;
+      position: relative;
+      z-index: 1;
     }
 
     /* ── Main content area ── */
@@ -114,18 +137,17 @@
       gap: 36px;
     }
     .section-label {
-      font-size: 16px;
+      font-size: 14px;
       letter-spacing: 2px;
-      color: var(--muted);
+      color: rgba(255,255,255,.4);
       text-transform: uppercase;
       margin: 0 0 14px;
-      font-family: Georgia, serif;
     }
     .section-title {
-      margin: 0 0 6px;
+      margin: 0 0 16px;
       font-size: 52px;
       font-style: italic;
-      color: var(--ink);
+      color: #fff;
       line-height: 1;
     }
 
@@ -136,49 +158,53 @@
       gap: 16px;
     }
     .category-card {
-      background: var(--paper);
       border-radius: 20px;
-      border: 1px solid var(--border);
-      box-shadow: var(--shadow);
-      padding: 28px 24px;
-      min-height: 200px;
-      cursor: pointer;
-      text-align: left;
-      color: var(--ink);
+      position: relative;
+      overflow: hidden;
+      min-height: 180px;
+      padding: 20px;
       display: flex;
       flex-direction: column;
-      gap: 10px;
-      transition: transform .15s ease, box-shadow .15s ease;
+      justify-content: flex-end;
+      cursor: pointer;
+      text-align: left;
+      color: #fff;
+      border: 1px solid rgba(255,255,255,.08);
+      transition: transform .2s ease, box-shadow .2s ease;
     }
     .category-card:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 10px 28px rgba(0,0,0,.13);
+      transform: scale(1.03);
+      box-shadow: 0 20px 40px rgba(0,0,0,.4);
     }
     .category-card:active {
-      transform: scale(.99);
-      box-shadow: var(--shadow);
+      transform: scale(.98);
     }
     .category-card-emoji {
+      position: absolute;
+      top: 14px;
+      right: 18px;
       font-size: 52px;
       line-height: 1;
+      opacity: .5;
+      animation: float 3s ease-in-out infinite;
     }
     .category-card-name {
       margin: 0;
-      font-size: 40px;
+      font-size: 36px;
       font-style: italic;
-      color: var(--ink);
-      line-height: 1;
+      color: #fff;
+      line-height: 1.05;
     }
     .category-card-sub {
-      margin: 0;
-      font-size: 20px;
-      color: var(--muted);
+      margin: 6px 0 0;
+      font-size: 18px;
+      color: rgba(255,255,255,.6);
       line-height: 1.2;
     }
     .category-card-count {
-      margin-top: auto;
-      font-size: 16px;
-      color: var(--highlight);
+      margin-top: 8px;
+      font-size: 14px;
+      color: rgba(255,255,255,.4);
       letter-spacing: 1px;
       text-transform: uppercase;
     }
@@ -190,17 +216,28 @@
       gap: 16px;
     }
     .offer-card {
-      background: var(--paper);
-      border-radius: 16px;
-      border: 2px solid rgba(180,100,30,.2);
-      padding: 20px 24px;
+      position: relative;
+      overflow: hidden;
+      background: rgba(255,255,255,.05);
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 14px;
+      padding: 16px 20px;
       display: flex;
       align-items: center;
       gap: 16px;
     }
+    .offer-card::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg,transparent,rgba(255,255,255,.04),transparent);
+      background-size: 400px 100%;
+      animation: shimmer 3s infinite;
+      pointer-events: none;
+    }
     .offer-pill {
-      background: #3a2e1e;
-      color: #f5ead0;
+      background: rgba(108,99,255,.3);
+      color: #c4bfff;
       font-size: 13px;
       letter-spacing: 1.5px;
       text-transform: uppercase;
@@ -213,20 +250,20 @@
     .offer-title {
       font-size: 28px;
       font-style: italic;
-      color: var(--ink);
+      color: #fff;
       margin: 0 0 4px;
       line-height: 1.1;
     }
     .offer-desc {
       font-size: 18px;
-      color: var(--muted);
+      color: rgba(255,255,255,.5);
       margin: 0;
       line-height: 1.3;
     }
     .offer-price {
       font-size: 22px;
       font-weight: 700;
-      color: var(--highlight);
+      color: #ffd966;
       margin-top: 6px;
     }
 
@@ -244,23 +281,22 @@
       flex-shrink: 0;
     }
     .back-btn {
-      background: var(--paper);
-      border: 1px solid var(--border);
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.12);
       border-radius: 12px;
       font-size: 26px;
-      color: var(--ink);
+      color: #fff;
       cursor: pointer;
       height: 72px;
       width: 200px;
-      box-shadow: var(--shadow);
       transition: background .12s;
       flex-shrink: 0;
     }
-    .back-btn:hover { background: #f0e8d4; }
+    .back-btn:hover { background: rgba(255,255,255,.14); }
     .category-heading {
       font-size: 48px;
       font-style: italic;
-      color: var(--ink);
+      color: #fff;
       margin: 0;
       line-height: 1;
     }
@@ -275,43 +311,45 @@
       align-content: start;
     }
     .product-card {
-      background: var(--paper);
+      background: rgba(255,255,255,.05);
+      border: 1px solid rgba(255,255,255,.06);
       border-radius: 16px;
-      border: 1px solid var(--border);
       overflow: hidden;
-      box-shadow: var(--shadow);
+      animation: fadeSlideIn 0.3s ease both;
     }
     .product-img-box {
-      height: 140px;
-      background: #f5f0e8;
+      height: 130px;
+      background: transparent;
       display: flex;
       align-items: center;
       justify-content: center;
     }
     .product-img-box img {
-      height: 120px;
+      height: 110px;
       width: auto;
       object-fit: contain;
       display: block;
+      animation: float 3s ease-in-out infinite;
+      filter: drop-shadow(0 8px 20px rgba(0,0,0,.5));
     }
     .product-img-box .product-fallback-emoji {
-      font-size: 56px;
+      font-size: 48px;
       line-height: 1;
     }
     .product-info-box {
-      padding: 14px 16px;
+      padding: 12px 14px;
     }
     .product-name {
-      font-size: 26px;
+      font-size: 22px;
       font-weight: 700;
-      color: var(--ink);
+      color: #fff;
       margin: 0;
       line-height: 1.15;
     }
     .product-price {
-      font-size: 22px;
+      font-size: 18px;
       font-style: italic;
-      color: var(--highlight);
+      color: #ffd966;
       margin: 4px 0 0;
     }
     .qty-row {
@@ -321,37 +359,41 @@
       margin-top: 10px;
     }
     .qty-btn {
-      width: 36px; height: 36px;
-      background: #3a2e1e;
-      color: #f5ead0;
-      border: none;
+      width: 34px; height: 34px;
+      background: rgba(255,255,255,.12);
+      border: 1px solid rgba(255,255,255,.15);
+      color: #fff;
       border-radius: 8px;
-      font-size: 24px;
+      font-size: 22px;
       line-height: 1;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
       padding: 0;
+      transition: background .12s;
     }
+    .qty-btn:hover { background: rgba(255,255,255,.22); }
     .qty-btn:active { opacity: .8; }
     .qty-val {
-      font-size: 24px;
+      font-size: 22px;
       font-weight: 700;
-      color: var(--ink);
-      min-width: 32px;
+      color: #fff;
+      min-width: 28px;
       text-align: center;
     }
     .empty-text {
       font-size: 22px;
-      color: var(--muted);
+      color: rgba(255,255,255,.5);
       padding: 32px;
     }
 
     /* ── Cart panel ── */
     .cart-panel {
-      background: #faf6ee;
-      border-left: 1px solid var(--border);
+      background: rgba(0,0,0,.35);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border-left: 1px solid rgba(255,255,255,.07);
       display: flex;
       flex-direction: column;
       min-height: 0;
@@ -365,7 +407,7 @@
     .cart-top h3 {
       font-size: 28px;
       font-style: italic;
-      color: var(--ink);
+      color: #fff;
       margin: 0 0 14px;
     }
     .cart-items { display: grid; gap: 0; }
@@ -374,18 +416,19 @@
       justify-content: space-between;
       font-size: 20px;
       padding: 8px 0;
-      border-bottom: 1px dashed rgba(0,0,0,.1);
-      color: var(--ink);
+      border-bottom: 1px dashed rgba(255,255,255,.1);
+      color: rgba(255,255,255,.7);
       line-height: 1.2;
     }
+    .cart-row strong { color: #fff; }
     .cart-empty {
       font-size: 18px;
-      color: var(--muted);
+      color: rgba(255,255,255,.4);
       line-height: 1.4;
     }
     .cart-bottom {
       padding: 16px;
-      border-top: 1px solid var(--border);
+      border-top: 1px solid rgba(255,255,255,.08);
       display: grid;
       gap: 10px;
     }
@@ -393,21 +436,22 @@
       display: flex;
       justify-content: space-between;
       font-size: 20px;
-      color: var(--muted);
+      color: rgba(255,255,255,.5);
     }
+    .cart-count-row strong { color: #fff; }
     .cart-total-row {
       display: flex;
       justify-content: space-between;
       font-size: 32px;
       font-style: italic;
       font-weight: 700;
-      color: var(--ink);
-      border-top: 1px solid var(--border);
+      color: #fff;
+      border-top: 1px solid rgba(255,255,255,.1);
       padding-top: 8px;
     }
     .pay-btn {
-      background: #3a2e1e;
-      color: #f5ead0;
+      background: linear-gradient(135deg,#6c63ff,#3b82f6);
+      color: #fff;
       border: none;
       border-radius: 12px;
       font-size: 26px;
@@ -415,27 +459,30 @@
       cursor: pointer;
       padding: 14px;
       width: 100%;
-      box-shadow: 0 4px 14px rgba(30,20,10,.22);
+      box-shadow: 0 4px 14px rgba(108,99,255,.4);
       transition: opacity .12s;
     }
-    .pay-btn:disabled { opacity: .45; cursor: not-allowed; }
+    .pay-btn:disabled { opacity: .35; cursor: not-allowed; box-shadow: none; }
     .pay-btn:not(:disabled):hover { opacity: .88; }
     .clear-btn {
       background: transparent;
-      border: 1px solid var(--border);
+      border: 1px solid rgba(255,255,255,.12);
       border-radius: 12px;
       font-size: 20px;
-      color: var(--muted);
+      color: rgba(255,255,255,.4);
       cursor: pointer;
       padding: 10px;
       width: 100%;
-      transition: background .12s;
+      transition: all .12s;
     }
-    .clear-btn:disabled { opacity: .4; cursor: not-allowed; }
-    .clear-btn:not(:disabled):hover { background: rgba(0,0,0,.04); }
+    .clear-btn:disabled { opacity: .3; cursor: not-allowed; }
+    .clear-btn:not(:disabled):hover {
+      background: rgba(255,255,255,.06);
+      color: rgba(255,255,255,.6);
+    }
     .swish-note {
       font-size: 14px;
-      color: var(--muted);
+      color: rgba(255,255,255,.35);
       text-align: center;
       line-height: 1.4;
     }
@@ -448,7 +495,9 @@
     }
     .admin-top-bar {
       height: 52px;
-      background: #3a2e1e;
+      background: rgba(0,0,0,.5);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -458,18 +507,19 @@
     .admin-top-bar-title {
       font-size: 30px;
       font-style: italic;
-      color: #f5ead0;
+      color: #fff;
     }
     .admin-logout-btn {
-      background: rgba(255,255,255,.12);
-      border: 1px solid rgba(255,255,255,.2);
+      background: rgba(255,255,255,.1);
+      border: 1px solid rgba(255,255,255,.15);
       border-radius: 8px;
-      color: #f5ead0;
+      color: rgba(255,255,255,.8);
       font-size: 18px;
       cursor: pointer;
       padding: 6px 16px;
+      transition: background .12s;
     }
-    .admin-logout-btn:hover { background: rgba(255,255,255,.2); }
+    .admin-logout-btn:hover { background: rgba(255,255,255,.18); }
     .admin-body {
       flex: 1;
       min-height: 0;
@@ -478,7 +528,7 @@
       overflow: hidden;
     }
     .admin-nav {
-      background: #2a2218;
+      background: #1a1525;
       padding: 16px 0;
       overflow-y: auto;
     }
@@ -488,20 +538,20 @@
       gap: 10px;
       padding: 14px 20px;
       font-size: 18px;
-      color: rgba(245,234,208,.6);
+      color: rgba(255,255,255,.45);
       cursor: pointer;
       border-left: 3px solid transparent;
       transition: all .12s;
       user-select: none;
     }
-    .admin-nav-item:hover { color: rgba(245,234,208,.85); }
+    .admin-nav-item:hover { color: rgba(255,255,255,.7); }
     .admin-nav-item.active {
-      color: #f5ead0;
-      border-left-color: #c8523a;
+      color: #fff;
+      border-left-color: #6c63ff;
       background: rgba(255,255,255,.07);
     }
     .admin-content {
-      background: #f0ebe0;
+      background: #0f0c29;
       padding: 24px;
       overflow-y: auto;
       min-height: 0;
@@ -511,7 +561,7 @@
     .admin-section-title {
       font-size: 36px;
       font-style: italic;
-      color: var(--ink);
+      color: #fff;
       margin: 0 0 20px;
     }
 
@@ -523,21 +573,27 @@
       margin-bottom: 20px;
     }
     .filter-btn {
-      background: var(--paper);
-      border: 1px solid var(--border);
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.1);
       border-radius: 8px;
       font-size: 18px;
-      color: var(--ink);
+      color: rgba(255,255,255,.7);
       cursor: pointer;
       padding: 8px 18px;
       transition: all .12s;
     }
-    .filter-btn:hover { background: #f0e8d4; }
-    .filter-btn.danger {
-      color: #c8523a;
-      border-color: rgba(200,82,58,.3);
+    .filter-btn:hover {
+      background: rgba(255,255,255,.12);
+      color: #fff;
     }
-    .filter-btn.danger:hover { background: rgba(200,82,58,.08); }
+    .filter-btn.danger {
+      color: rgba(255,100,80,.8);
+      border-color: rgba(255,100,80,.2);
+    }
+    .filter-btn.danger:hover {
+      background: rgba(255,80,60,.12);
+      color: #ff7a6a;
+    }
     .stat-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -545,55 +601,54 @@
       margin-bottom: 16px;
     }
     .stat-card {
-      background: var(--paper);
+      background: rgba(255,255,255,.05);
       border-radius: 12px;
-      border: 1px solid var(--border);
+      border: 1px solid rgba(255,255,255,.08);
       padding: 16px 18px;
-      box-shadow: var(--shadow);
     }
     .stat-label {
       font-size: 16px;
-      color: var(--muted);
+      color: rgba(255,255,255,.45);
       margin-bottom: 6px;
     }
     .stat-value {
       font-size: 32px;
       font-weight: 700;
-      color: var(--ink);
+      color: #fff;
       line-height: 1;
     }
     .report-meta-text {
       font-size: 18px;
-      color: var(--muted);
+      color: rgba(255,255,255,.45);
       margin-bottom: 16px;
       line-height: 1.4;
     }
     .report-output { display: grid; gap: 12px; }
     .report-group {
-      background: var(--paper);
+      background: rgba(255,255,255,.05);
       border-radius: 12px;
-      border: 1px solid var(--border);
+      border: 1px solid rgba(255,255,255,.08);
       padding: 14px 18px;
-      box-shadow: var(--shadow);
     }
     .report-group h4 {
       margin: 0 0 10px;
       font-size: 24px;
       font-style: italic;
-      color: var(--ink);
+      color: #fff;
     }
     .report-row {
       display: flex;
       justify-content: space-between;
       font-size: 20px;
       padding: 6px 0;
-      border-bottom: 1px dashed rgba(0,0,0,.08);
-      color: var(--ink);
+      border-bottom: 1px dashed rgba(255,255,255,.08);
+      color: rgba(255,255,255,.7);
     }
     .report-row:last-child { border-bottom: none; }
+    .report-row strong { color: #fff; }
     .report-empty {
       font-size: 20px;
-      color: var(--muted);
+      color: rgba(255,255,255,.4);
     }
 
     /* Erbjudanden section */
@@ -604,19 +659,18 @@
       margin-bottom: 20px;
     }
     .offer-edit-card {
-      background: var(--paper);
+      background: rgba(255,255,255,.05);
       border-radius: 16px;
-      border: 1px solid var(--border);
+      border: 1px solid rgba(255,255,255,.08);
       padding: 20px;
       display: grid;
       gap: 12px;
-      box-shadow: var(--shadow);
     }
     .offer-edit-card h4 {
       margin: 0;
       font-size: 22px;
       font-style: italic;
-      color: var(--ink);
+      color: #fff;
     }
     .offer-type-pills {
       display: flex;
@@ -630,33 +684,34 @@
       letter-spacing: 1px;
       text-transform: uppercase;
       cursor: pointer;
-      border: 1px solid rgba(0,0,0,.12);
-      background: var(--bg);
-      color: var(--muted);
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.05);
+      color: rgba(255,255,255,.45);
       transition: all .12s;
     }
     .offer-type-pill.active {
-      background: #3a2e1e;
-      color: #f5ead0;
-      border-color: #3a2e1e;
+      background: rgba(108,99,255,.3);
+      color: #c4bfff;
+      border-color: rgba(108,99,255,.4);
     }
     .admin-input {
       width: 100%;
-      border: 1px solid rgba(0,0,0,.14);
-      border-radius: 10px;
-      background: #fff;
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 8px;
+      background: rgba(255,255,255,.08);
       padding: 10px 14px;
       font-size: 20px;
-      color: var(--ink);
+      color: #fff;
       outline: none;
     }
     .admin-input:focus {
-      border-color: rgba(58,46,30,.4);
-      box-shadow: 0 0 0 3px rgba(58,46,30,.08);
+      border-color: rgba(108,99,255,.5);
+      box-shadow: 0 0 0 3px rgba(108,99,255,.12);
     }
+    .admin-input::placeholder { color: rgba(255,255,255,.3); }
     .admin-input-label {
       font-size: 16px;
-      color: var(--muted);
+      color: rgba(255,255,255,.45);
       margin-bottom: 4px;
       display: block;
     }
@@ -668,8 +723,8 @@
       margin-bottom: 16px;
     }
     .admin-btn {
-      background: #3a2e1e;
-      color: #f5ead0;
+      background: linear-gradient(135deg,#6c63ff,#3b82f6);
+      color: #fff;
       border: none;
       border-radius: 10px;
       font-size: 18px;
@@ -680,27 +735,29 @@
     }
     .admin-btn:hover { opacity: .88; }
     .admin-btn.danger {
-      background: #c8523a;
+      background: linear-gradient(135deg,#e74c3c,#c0392b);
     }
     .admin-btn.secondary {
-      background: var(--paper);
-      color: var(--ink);
-      border: 1px solid var(--border);
+      background: rgba(255,255,255,.08);
+      color: rgba(255,255,255,.7);
+      border: 1px solid rgba(255,255,255,.12);
     }
-    .admin-btn.secondary:hover { background: #f0e8d4; }
+    .admin-btn.secondary:hover {
+      background: rgba(255,255,255,.14);
+      color: #fff;
+    }
     .catalog-status {
       font-size: 17px;
-      color: var(--muted);
+      color: rgba(255,255,255,.45);
       margin-bottom: 14px;
       line-height: 1.4;
     }
     .catalog-editor { display: grid; gap: 14px; }
     .catalog-group {
-      background: var(--paper);
+      background: rgba(255,255,255,.05);
       border-radius: 12px;
-      border: 1px solid var(--border);
+      border: 1px solid rgba(255,255,255,.08);
       padding: 16px;
-      box-shadow: var(--shadow);
     }
     .catalog-group-head {
       display: flex;
@@ -714,7 +771,7 @@
       margin: 0;
       font-size: 26px;
       font-style: italic;
-      color: var(--ink);
+      color: #fff;
     }
     .catalog-group-actions { display: flex; gap: 8px; }
     .catalog-item-row {
@@ -723,23 +780,24 @@
       gap: 10px;
       align-items: center;
       padding: 8px 0;
-      border-bottom: 1px dashed rgba(0,0,0,.08);
+      border-bottom: 1px dashed rgba(255,255,255,.08);
     }
     .catalog-item-row:last-child { border-bottom: none; }
     .catalog-input {
       width: 100%;
-      border: 1px solid rgba(0,0,0,.12);
+      border: 1px solid rgba(255,255,255,.12);
       border-radius: 8px;
-      background: #fff;
+      background: rgba(255,255,255,.08);
       padding: 8px 12px;
       font-size: 18px;
-      color: var(--ink);
+      color: #fff;
       outline: none;
     }
     .catalog-input:focus {
-      border-color: rgba(58,46,30,.35);
-      box-shadow: 0 0 0 2px rgba(58,46,30,.07);
+      border-color: rgba(108,99,255,.4);
+      box-shadow: 0 0 0 2px rgba(108,99,255,.1);
     }
+    .catalog-input::placeholder { color: rgba(255,255,255,.3); }
     .catalog-price-wrap {
       display: flex;
       align-items: center;
@@ -748,20 +806,21 @@
     .catalog-price-suffix {
       font-size: 16px;
       font-weight: 700;
-      color: var(--muted);
+      color: rgba(255,255,255,.5);
       white-space: nowrap;
     }
     .catalog-small-btn {
       border: none;
       border-radius: 8px;
-      background: #c8523a;
+      background: rgba(231,76,60,.5);
       color: #fff;
       font-size: 16px;
       cursor: pointer;
       padding: 8px 12px;
       font-family: inherit;
+      transition: background .12s;
     }
-    .catalog-small-btn:hover { opacity: .85; }
+    .catalog-small-btn:hover { background: rgba(231,76,60,.7); }
 
     /* Inställningar section */
     .settings-grid {
@@ -775,7 +834,7 @@
     .pay-overlay {
       position: absolute;
       inset: 0;
-      background: rgba(240,235,224,.72);
+      background: rgba(0,0,0,.6);
       display: none;
       align-items: center;
       justify-content: center;
@@ -783,10 +842,10 @@
     }
     .pay-overlay.active { display: flex; }
     .pay-modal {
-      background: #fff;
+      background: linear-gradient(160deg,#1e1b3a,#2d2b50);
       border-radius: 22px;
-      border: 1px solid var(--border);
-      box-shadow: 0 20px 56px rgba(0,0,0,.18);
+      border: 1px solid rgba(255,255,255,.1);
+      box-shadow: 0 20px 56px rgba(0,0,0,.5);
       max-width: 680px;
       width: 100%;
       padding: 28px;
@@ -798,12 +857,12 @@
       margin: 0 0 6px;
       font-size: 40px;
       font-style: italic;
-      color: var(--ink);
+      color: #fff;
     }
     .pay-modal-head p {
       margin: 0;
       font-size: 20px;
-      color: var(--muted);
+      color: rgba(255,255,255,.5);
     }
     .pay-qr-wrap {
       display: flex;
@@ -814,7 +873,7 @@
       background: #fff;
       border-radius: 16px;
       padding: 14px;
-      box-shadow: var(--shadow);
+      box-shadow: 0 8px 32px rgba(0,0,0,.3);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -829,16 +888,16 @@
     .pay-amount {
       font-size: 44px;
       font-weight: 700;
-      color: var(--highlight);
+      color: #ffd966;
       line-height: 1;
     }
     .pay-message, .pay-number {
       font-size: 20px;
-      color: var(--muted);
+      color: rgba(255,255,255,.5);
     }
     .modal-close-btn {
-      background: #3a2e1e;
-      color: #f5ead0;
+      background: linear-gradient(135deg,#6c63ff,#3b82f6);
+      color: #fff;
       border: none;
       border-radius: 12px;
       font-size: 22px;
@@ -846,6 +905,7 @@
       cursor: pointer;
       padding: 14px;
       width: 100%;
+      box-shadow: 0 4px 14px rgba(108,99,255,.3);
     }
     .modal-close-btn:hover { opacity: .88; }
 
@@ -853,7 +913,7 @@
     .admin-modal-overlay {
       position: absolute;
       inset: 0;
-      background: rgba(240,235,224,.72);
+      background: rgba(0,0,0,.6);
       display: none;
       align-items: center;
       justify-content: center;
@@ -861,10 +921,10 @@
     }
     .admin-modal-overlay.active { display: flex; }
     .admin-modal {
-      background: #fff;
+      background: linear-gradient(160deg,#1e1b3a,#2d2b50);
       border-radius: 20px;
-      border: 1px solid var(--border);
-      box-shadow: 0 16px 48px rgba(0,0,0,.16);
+      border: 1px solid rgba(255,255,255,.1);
+      box-shadow: 0 16px 48px rgba(0,0,0,.5);
       max-width: 480px;
       width: 100%;
       padding: 28px;
@@ -876,32 +936,33 @@
       margin: 0 0 6px;
       font-size: 36px;
       font-style: italic;
-      color: var(--ink);
+      color: #fff;
     }
     .admin-modal-head p {
       margin: 0;
       font-size: 20px;
-      color: var(--muted);
+      color: rgba(255,255,255,.5);
     }
     .admin-password {
       width: 100%;
-      border: 1px solid rgba(0,0,0,.14);
+      border: 1px solid rgba(255,255,255,.15);
       border-radius: 12px;
-      background: #faf8f3;
+      background: rgba(255,255,255,.08);
       padding: 14px 18px;
       font-size: 28px;
-      color: var(--ink);
+      color: #fff;
       outline: none;
       font-family: inherit;
     }
+    .admin-password::placeholder { color: rgba(255,255,255,.3); }
     .admin-password:focus {
-      border-color: rgba(58,46,30,.4);
-      box-shadow: 0 0 0 3px rgba(58,46,30,.08);
+      border-color: rgba(108,99,255,.5);
+      box-shadow: 0 0 0 3px rgba(108,99,255,.15);
     }
     .admin-modal-error {
       min-height: 24px;
       font-size: 18px;
-      color: #c8523a;
+      color: #ff7a6a;
       text-align: center;
       font-weight: 700;
     }
@@ -913,8 +974,8 @@
     .modal-btn {
       border: none;
       border-radius: 10px;
-      background: #3a2e1e;
-      color: #f5ead0;
+      background: linear-gradient(135deg,#6c63ff,#3b82f6);
+      color: #fff;
       font-size: 22px;
       font-weight: 700;
       cursor: pointer;
@@ -922,9 +983,9 @@
       font-family: inherit;
     }
     .modal-btn.cancel {
-      background: #f0ebe0;
-      color: var(--ink);
-      border: 1px solid var(--border);
+      background: rgba(255,255,255,.08);
+      color: rgba(255,255,255,.6);
+      border: 1px solid rgba(255,255,255,.12);
     }
     .modal-btn:hover { opacity: .88; }
 
@@ -958,8 +1019,16 @@
     .admin-content::-webkit-scrollbar-thumb,
     .report-output::-webkit-scrollbar-thumb,
     .catalog-editor::-webkit-scrollbar-thumb {
-      background: rgba(58,46,30,.2);
+      background: rgba(108,99,255,.25);
       border-radius: 8px;
+    }
+    .product-grid::-webkit-scrollbar-track,
+    .view::-webkit-scrollbar-track,
+    .cart-top::-webkit-scrollbar-track,
+    .admin-content::-webkit-scrollbar-track,
+    .report-output::-webkit-scrollbar-track,
+    .catalog-editor::-webkit-scrollbar-track {
+      background: rgba(255,255,255,.03);
     }
   </style>
 </head>
@@ -967,6 +1036,11 @@
   <div class="viewport">
     <div class="stage" id="stage">
       <div class="app">
+
+        <!-- Orbs -->
+        <div class="orb orb1"></div>
+        <div class="orb orb2"></div>
+        <div class="orb orb3"></div>
 
         <!-- ── Top bar (customer) ── -->
         <div class="top-bar" id="customerTopBar">
@@ -1053,7 +1127,6 @@
                       </div>
                       <p class="report-meta-text" id="reportMetaText">Välj ett tidsintervall ovan.</p>
                       <div class="report-output" id="reportOutput"></div>
-                      <!-- Hidden compat elements -->
                       <span id="reportPanelTitle" style="display:none"></span>
                     </div>
 
@@ -1061,7 +1134,6 @@
                     <div class="admin-section" id="adminSectionErbjudanden">
                       <h3 class="admin-section-title">Erbjudanden</h3>
                       <div class="offers-edit-grid">
-                        <!-- Offer 1 -->
                         <div class="offer-edit-card">
                           <h4>Erbjudande 1</h4>
                           <div>
@@ -1085,7 +1157,6 @@
                             <input class="admin-input" type="text" id="offer1Price" placeholder="t.ex. 40 kr" />
                           </div>
                         </div>
-                        <!-- Offer 2 -->
                         <div class="offer-edit-card">
                           <h4>Erbjudande 2</h4>
                           <div>
@@ -1141,12 +1212,12 @@
                       </div>
                     </div>
 
-                  </div><!-- /admin-content -->
-                </div><!-- /admin-body -->
-              </div><!-- /admin-shell -->
+                  </div>
+                </div>
+              </div>
             </section>
 
-          </div><!-- /main-content -->
+          </div>
 
           <!-- Cart panel -->
           <aside class="cart-panel">
@@ -1169,7 +1240,7 @@
             </div>
           </aside>
 
-        </div><!-- /body -->
+        </div>
 
         <!-- Hidden admin trigger -->
         <button
@@ -1224,9 +1295,9 @@
           </div>
         </div>
 
-      </div><!-- /app -->
-    </div><!-- /stage -->
-  </div><!-- /viewport -->
+      </div>
+    </div>
+  </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script>
@@ -1285,6 +1356,13 @@
 
     const CATEGORY_EMOJI = {
       dryck: "🥤", snacks: "🍫", mellanmal: "🥗", mat: "🍕"
+    };
+
+    const CATEGORY_GRADIENTS = {
+      dryck:     "linear-gradient(160deg,#1a6b8a,#0d3d52)",
+      snacks:    "linear-gradient(160deg,#8a5a1a,#52320d)",
+      mellanmal: "linear-gradient(160deg,#2d7a3a,#1a4d22)",
+      mat:       "linear-gradient(160deg,#8a2a1a,#52100d)"
     };
 
     /* ── Default categories ── */
@@ -1581,10 +1659,14 @@
     function getCategoryEmoji(key) {
       return CATEGORY_EMOJI[key] || "📦";
     }
+    function getCategoryGradient(key) {
+      return CATEGORY_GRADIENTS[key] || "linear-gradient(160deg,#3a3a5c,#24243e)";
+    }
     function renderOverview() {
-      overviewGrid.innerHTML = categories.map(cat => `
-        <button class="category-card" data-category="${escapeHtml(cat.key)}" type="button">
-          <div class="category-card-emoji">${getCategoryEmoji(cat.key)}</div>
+      overviewGrid.innerHTML = categories.map((cat, idx) => `
+        <button class="category-card" data-category="${escapeHtml(cat.key)}" type="button"
+          style="background:${getCategoryGradient(cat.key)}">
+          <div class="category-card-emoji" style="animation-delay:${idx * 0.5}s">${getCategoryEmoji(cat.key)}</div>
           <h2 class="category-card-name">${escapeHtml(cat.title)}</h2>
           <p class="category-card-sub">${escapeHtml(cat.subtitle || "")}</p>
           <div class="category-card-count">${cat.items.length} produkter</div>
@@ -1607,10 +1689,10 @@
     }
 
     /* ── Category / Product rendering ── */
-    function getProductImageHtml(itemId, catKey) {
+    function getProductImageHtml(itemId, catKey, index) {
       const src = PRODUCT_IMAGES[itemId];
       if (src) {
-        return `<img src="${escapeHtml(src)}" alt="" onerror="this.parentElement.innerHTML='<span class=\\"product-fallback-emoji\\">${getCategoryEmoji(catKey)}</span>'" />`;
+        return `<img src="${escapeHtml(src)}" alt="" style="animation-delay:${index * 0.15}s" onerror="this.parentElement.innerHTML='<span class=\\"product-fallback-emoji\\">${getCategoryEmoji(catKey)}</span>'" />`;
       }
       return `<span class="product-fallback-emoji">${getCategoryEmoji(catKey)}</span>`;
     }
@@ -1623,11 +1705,11 @@
         productList.innerHTML = `<div class="empty-text">Inga produkter i den här kategorin ännu.</div>`;
         return;
       }
-      productList.innerHTML = cat.items.map(item => {
+      productList.innerHTML = cat.items.map((item, index) => {
         const qty = getQty(cat.key, item.id);
         return `
-          <div class="product-card">
-            <div class="product-img-box">${getProductImageHtml(item.id, cat.key)}</div>
+          <div class="product-card" style="animation-delay:${index * 0.06}s">
+            <div class="product-img-box">${getProductImageHtml(item.id, cat.key, index)}</div>
             <div class="product-info-box">
               <div class="product-name">${escapeHtml(item.name)}</div>
               <div class="product-price">${escapeHtml(item.price)} kr</div>
@@ -2040,7 +2122,6 @@
         if (titleEl) titleEl.value = offer.title || "";
         if (descEl)  descEl.value  = offer.desc  || "";
         if (priceEl) priceEl.value = offer.price || "";
-        // Set active pill
         const pillsContainer = document.getElementById(`offer${n}TypePills`);
         if (pillsContainer) {
           pillsContainer.querySelectorAll(".offer-type-pill").forEach(p => {
