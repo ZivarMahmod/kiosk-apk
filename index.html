@@ -902,19 +902,141 @@
       font-size: 20px;
       color: rgba(255,255,255,.5);
     }
-    .modal-close-btn {
+    .pay-modal-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    .pay-register-btn {
+      min-height: 64px;
+      border: 1px solid rgba(255,255,255,.15);
+      border-radius: 14px;
+      background: rgba(255,255,255,.12);
+      color: rgba(255,255,255,.8);
+      font-family: Georgia, serif;
+      font-size: 24px;
+      cursor: pointer;
+    }
+    .pay-receipt-btn {
+      min-height: 64px;
+      border: none;
+      border-radius: 14px;
       background: linear-gradient(135deg,#6c63ff,#3b82f6);
       color: #fff;
-      border: none;
-      border-radius: 12px;
-      font-size: 22px;
+      font-family: Georgia, serif;
+      font-size: 24px;
       font-weight: 700;
       cursor: pointer;
-      padding: 14px;
+      box-shadow: 0 4px 14px rgba(108,99,255,.4);
+    }
+
+    /* ── Receipt modal ── */
+    .receipt-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,.65);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+      padding: 24px;
+    }
+    .receipt-overlay.active { display: flex; }
+    .receipt-modal {
       width: 100%;
+      max-width: 600px;
+      background: linear-gradient(160deg,#1e1b3a,#2d2b50);
+      border: 1px solid rgba(255,255,255,.15);
+      border-radius: 22px;
+      padding: 28px;
+      display: grid;
+      gap: 14px;
+      box-shadow: 0 24px 56px rgba(0,0,0,.6);
+    }
+    .receipt-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .receipt-logo {
+      font-size: 28px;
+      font-style: italic;
+      color: #fff;
+    }
+    .receipt-countdown-wrap {
+      display: flex;
+      align-items: baseline;
+      gap: 4px;
+      background: rgba(255,255,255,.08);
+      border-radius: 10px;
+      padding: 6px 14px;
+    }
+    .receipt-countdown {
+      font-size: 28px;
+      font-weight: 700;
+      color: #ffd966;
+      min-width: 28px;
+      text-align: center;
+    }
+    .receipt-countdown-label {
+      font-size: 16px;
+      color: rgba(255,255,255,.5);
+    }
+    .receipt-id-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255,255,255,.1);
+      padding-bottom: 10px;
+    }
+    .receipt-id-label {
+      font-size: 16px;
+      letter-spacing: 2px;
+      color: rgba(255,255,255,.5);
+    }
+    .receipt-id-value {
+      font-size: 32px;
+      font-weight: 700;
+      color: #ffd966;
+      font-style: italic;
+    }
+    .receipt-time {
+      font-size: 16px;
+      color: rgba(255,255,255,.45);
+    }
+    .receipt-items { display: grid; gap: 6px; }
+    .receipt-item-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 22px;
+      color: #fff;
+      padding: 4px 0;
+    }
+    .receipt-divider { border-top: 1px dashed rgba(255,255,255,.2); }
+    .receipt-total-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 28px;
+      font-weight: 700;
+      color: #fff;
+    }
+    .receipt-swish-row {
+      font-size: 16px;
+      color: rgba(255,255,255,.45);
+      font-style: italic;
+    }
+    .receipt-close-btn {
+      min-height: 60px;
+      border: none;
+      border-radius: 14px;
+      background: linear-gradient(135deg,#6c63ff,#3b82f6);
+      color: #fff;
+      font-family: Georgia, serif;
+      font-size: 24px;
+      font-weight: 700;
+      cursor: pointer;
       box-shadow: 0 4px 14px rgba(108,99,255,.3);
     }
-    .modal-close-btn:hover { opacity: .88; }
 
     /* ── Admin login modal ── */
     .admin-modal-overlay {
@@ -1242,6 +1364,8 @@
                     <div class="admin-nav-item" data-section="produkter">📦 Produkter</div>
                     <div class="admin-nav-item" data-section="installningar">⚙ Inställningar</div>
                     <div class="admin-nav-item" data-section="wishes">💌 Önskningar</div>
+                    <div class="admin-nav-item" data-section="receipts">🧾 Kvitton</div>
+                    <div class="admin-nav-item" data-section="inventory">📦 Lager</div>
                   </nav>
 
                   <!-- Content -->
@@ -1283,6 +1407,10 @@
                         <div class="offer-edit-card">
                           <h4>Erbjudande 1</h4>
                           <div>
+                            <label class="admin-input-label">ETIKETT (valfri egen text)</label>
+                            <input class="admin-input" type="text" id="offer1CustomType" placeholder="T.ex. DAGENS TIPS" maxlength="20" />
+                          </div>
+                          <div>
                             <span class="admin-input-label">Typ</span>
                             <div class="offer-type-pills" id="offer1TypePills">
                               <span class="offer-type-pill active" data-offer="1" data-type="VECKANS DEAL">VECKANS DEAL</span>
@@ -1305,6 +1433,10 @@
                         </div>
                         <div class="offer-edit-card">
                           <h4>Erbjudande 2</h4>
+                          <div>
+                            <label class="admin-input-label">ETIKETT (valfri egen text)</label>
+                            <input class="admin-input" type="text" id="offer2CustomType" placeholder="T.ex. DAGENS TIPS" maxlength="20" />
+                          </div>
                           <div>
                             <span class="admin-input-label">Typ</span>
                             <div class="offer-type-pills" id="offer2TypePills">
@@ -1363,6 +1495,24 @@
                       <h3 class="admin-section-title">Önskningar från kunder</h3>
                       <div id="wishList"></div>
                       <button class="report-action-btn danger" id="clearWishesBtn" type="button" style="margin-top:12px;">Rensa alla önskningar</button>
+                    </div>
+
+                    <!-- Kvitton -->
+                    <div class="admin-section" id="adminSectionReceipts">
+                      <h3 class="admin-section-title">Kvitton</h3>
+                      <div class="report-meta-text" id="receiptsMetaText"></div>
+                      <div id="receiptsList"></div>
+                    </div>
+
+                    <!-- Lager -->
+                    <div class="admin-section" id="adminSectionInventory">
+                      <h3 class="admin-section-title">Lagerhantering</h3>
+                      <div class="report-meta-text">Ange hur många du fyllt på. Systemet räknar ner vid varje köp. Varning visas när under 10 kvar.</div>
+                      <div id="inventoryEditor"></div>
+                      <div class="save-bar" style="margin-top:12px;display:flex;align-items:center;gap:12px;">
+                        <span id="inventorySaveStatus" style="font-size:16px;color:rgba(255,255,255,.5);">Fyll i lagersaldon ovan.</span>
+                        <button class="admin-btn" id="saveInventoryBtn" type="button">Spara lager</button>
+                      </div>
                     </div>
 
                   </div>
@@ -1451,7 +1601,36 @@
               <div class="pay-message" id="payMessageText"></div>
               <div class="pay-number" id="payNumberText"></div>
             </div>
-            <button class="modal-close-btn" id="payCloseBtn" type="button">Stäng &amp; registrera köp</button>
+            <div class="pay-modal-actions">
+              <button class="pay-register-btn" id="payRegisterBtn" type="button">Registrera köp</button>
+              <button class="pay-receipt-btn" id="payReceiptBtn" type="button">Visa kvitto 🧾</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Receipt modal -->
+        <div class="receipt-overlay" id="receiptOverlay" aria-hidden="true">
+          <div class="receipt-modal">
+            <div class="receipt-header">
+              <div class="receipt-logo">Zivert Holms hörna</div>
+              <div class="receipt-countdown-wrap">
+                <div class="receipt-countdown" id="receiptCountdown">15</div>
+                <div class="receipt-countdown-label">sek</div>
+              </div>
+            </div>
+            <div class="receipt-id-row">
+              <span class="receipt-id-label">KVITTO</span>
+              <span class="receipt-id-value" id="receiptIdDisplay">#0001</span>
+            </div>
+            <div class="receipt-time" id="receiptTimeDisplay"></div>
+            <div class="receipt-items" id="receiptItemsList"></div>
+            <div class="receipt-divider"></div>
+            <div class="receipt-total-row">
+              <span>TOTALT</span>
+              <span id="receiptTotalDisplay">0 kr</span>
+            </div>
+            <div class="receipt-swish-row" id="receiptSwishRow"></div>
+            <button class="receipt-close-btn" id="receiptCloseBtn" type="button">Stäng & klar ✓</button>
           </div>
         </div>
 
@@ -1498,6 +1677,9 @@
     const OFFERS_STORAGE_KEY = "zivert-holm-offers-v1";
     const SETTINGS_STORAGE_KEY = "zivert-holm-settings-v1";
     const WISHES_STORAGE_KEY = "zivert-holm-wishes-v1";
+    const RECEIPT_STORAGE_KEY = "zivert-holm-receipts-v1";
+    const RECEIPT_COUNTER_KEY = "zivert-holm-receipt-counter-v1";
+    const INVENTORY_STORAGE_KEY = "zivert-holm-inventory-v1";
 
     /* ── Product images ── */
     const PRODUCT_IMAGES = {
@@ -1546,14 +1728,14 @@
         title: "Dryck",
         subtitle: "Dryck, energi & kaffe",
         items: [
-          { id: "coca-cola-zero", name: "Coca-Cola Zero", price: 15, note: "Välj smak vid kylen" },
+          { id: "coca-cola-zero", name: "Coca-Cola Zero", price: 15 },
           { id: "pepsi-max", name: "Pepsi Max", price: 15, note: "Välj smak vid kylen" },
-          { id: "fanta-orange", name: "Fanta Orange", price: 15, note: "Välj smak vid kylen" },
-          { id: "trocadero", name: "Trocadero", price: 15, note: "Välj smak vid kylen" },
+          { id: "fanta-orange", name: "Fanta Orange", price: 15 },
+          { id: "trocadero", name: "Trocadero", price: 15 },
           { id: "bonaqua", name: "Bonaqua", price: 15, note: "Välj smak vid kylen" },
-          { id: "red-bull", name: "Red Bull", price: 22, note: "Välj smak vid kylen" },
+          { id: "red-bull", name: "Red Bull", price: 22 },
           { id: "celsius", name: "Celsius", price: 25, note: "Välj smak vid kylen" },
-          { id: "monster", name: "Monster Energy", price: 22, note: "Välj smak vid kylen" },
+          { id: "monster", name: "Monster Energy", price: 22 },
           { id: "lofbergs", name: "Löfbergs Ice", price: 30, note: "Välj smak vid kylen" },
           { id: "nocco", name: "Nocco", price: 25, note: "Välj smak vid kylen" }
         ]
@@ -1653,6 +1835,46 @@
       return loadSettings().password || REPORT_PASSWORD;
     }
 
+    /* ── Receipt ID ── */
+    function getNextReceiptId() {
+      try {
+        let current = parseInt(localStorage.getItem(RECEIPT_COUNTER_KEY) || "0");
+        current = (current >= 1000) ? 1 : current + 1;
+        localStorage.setItem(RECEIPT_COUNTER_KEY, String(current));
+        return String(current).padStart(4, "0");
+      } catch(e) {
+        return "0001";
+      }
+    }
+    function loadReceipts() {
+      try {
+        const raw = localStorage.getItem(RECEIPT_STORAGE_KEY);
+        const parsed = raw ? JSON.parse(raw) : [];
+        return Array.isArray(parsed) ? parsed : [];
+      } catch(e) { return []; }
+    }
+    function saveReceipt(receiptId, cart, total) {
+      const receipts = loadReceipts();
+      receipts.push({
+        id: receiptId,
+        time: new Date().toISOString(),
+        items: cart.map(i => ({ name: i.name, qty: i.qty, sum: i.sum })),
+        total
+      });
+      localStorage.setItem(RECEIPT_STORAGE_KEY, JSON.stringify(receipts));
+    }
+
+    /* ── Inventory ── */
+    function loadInventory() {
+      try {
+        const raw = localStorage.getItem(INVENTORY_STORAGE_KEY);
+        return raw ? JSON.parse(raw) : {};
+      } catch(e) { return {}; }
+    }
+    function saveInventory(inv) {
+      localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(inv));
+    }
+
     /* ── Offers ── */
     function loadOffers() {
       try {
@@ -1748,7 +1970,6 @@
     const addCategoryBtn      = document.getElementById("addCategoryBtn");
     const catalogSaveStatus   = document.getElementById("catalogSaveStatus");
     const payOverlay          = document.getElementById("payOverlay");
-    const payCloseBtn         = document.getElementById("payCloseBtn");
     const swishQr             = document.getElementById("swishQr");
     const payAmountText       = document.getElementById("payAmountText");
     const payMessageText      = document.getElementById("payMessageText");
@@ -1760,7 +1981,9 @@
     /* ── Utilities ── */
     function formatKr(value) { return `${value} kr`; }
     function formatSwishAmount(value) { return Number(value).toFixed(2).replace(".", ","); }
-    function buildSwishMessage(n) { return `${SWISH_MESSAGE_PREFIX} ${n} varor`; }
+    function buildSwishMessage(totalItems, receiptId) {
+      return `${SWISH_MESSAGE_PREFIX} ${totalItems} varor KV-${receiptId}`;
+    }
     function buildSwishPayload(amount, message) {
       const num = getEffectiveSwishNumber();
       return `C${num};${formatSwishAmount(amount)};${encodeURIComponent(message)};${SWISH_LOCK_MASK}`;
@@ -1827,6 +2050,8 @@
         if (section === "erbjudanden") loadOffersIntoEditor();
         if (section === "installningar") loadSettingsIntoEditor();
         if (section === "wishes") renderWishes();
+        if (section === "receipts") renderReceiptsAdmin();
+        if (section === "inventory") renderInventoryEditor();
       });
     });
 
@@ -1955,18 +2180,26 @@
 
     /* ── Payment modal ── */
     function openPaymentModal() {
-      const { totalItems, total } = getTotals();
+      const { cart, totalItems, total } = getTotals();
       if (!total) return;
-      const message = buildSwishMessage(totalItems);
+
+      const receiptId = getNextReceiptId();
+      state.currentReceiptId = receiptId;
+      state.currentCart = cart;
+
+      const message = buildSwishMessage(totalItems, receiptId);
       const payload = buildSwishPayload(total, message);
+
       payAmountText.textContent = formatKr(total);
       payMessageText.textContent = `Meddelande: ${message}`;
       payNumberText.textContent = `Swish: ${getEffectiveSwishNumber()}`;
+
       swishQr.innerHTML = "";
       state.qrInstance = new QRCode(swishQr, {
-        text: payload, width: 292, height: 292,
+        text: payload, width: 320, height: 320,
         correctLevel: QRCode.CorrectLevel.M
       });
+
       payOverlay.classList.add("active");
       payOverlay.setAttribute("aria-hidden", "false");
     }
@@ -1994,6 +2227,15 @@
         total: cart.reduce((s, it) => s + it.sum, 0)
       });
       saveSales(sales);
+
+      // Minska lager
+      const inv = loadInventory();
+      cart.forEach(item => {
+        if (inv[item.itemId] !== undefined) {
+          inv[item.itemId] = Math.max(0, inv[item.itemId] - item.qty);
+        }
+      });
+      saveInventory(inv);
     }
 
     function clearCartState() {
@@ -2295,13 +2537,18 @@
         const titleEl = document.getElementById(`offer${n}Title`);
         const descEl  = document.getElementById(`offer${n}Desc`);
         const priceEl = document.getElementById(`offer${n}Price`);
+        const customEl = document.getElementById(`offer${n}CustomType`);
         if (titleEl) titleEl.value = offer.title || "";
         if (descEl)  descEl.value  = offer.desc  || "";
         if (priceEl) priceEl.value = offer.price || "";
+        // Check if type is a standard pill or custom
+        const standardTypes = ["VECKANS DEAL", "KOMMER SNART", "NYHET"];
+        const isCustom = offer.type && !standardTypes.includes(offer.type);
+        if (customEl) customEl.value = isCustom ? offer.type : "";
         const pillsContainer = document.getElementById(`offer${n}TypePills`);
         if (pillsContainer) {
           pillsContainer.querySelectorAll(".offer-type-pill").forEach(p => {
-            p.classList.toggle("active", p.dataset.type === offer.type);
+            p.classList.toggle("active", !isCustom && p.dataset.type === offer.type);
           });
         }
       });
@@ -2313,12 +2560,15 @@
       return active ? active.dataset.type : "VECKANS DEAL";
     }
     function saveOffersFromEditor() {
-      const offers = [1, 2].map(n => ({
-        type:  getActiveOfferType(n),
-        title: (document.getElementById(`offer${n}Title`) || {}).value || "",
-        desc:  (document.getElementById(`offer${n}Desc`)  || {}).value || "",
-        price: (document.getElementById(`offer${n}Price`) || {}).value || ""
-      }));
+      const offers = [1, 2].map(n => {
+        const customType = (document.getElementById(`offer${n}CustomType`) || {}).value || "";
+        return {
+          type:  customType.trim() || getActiveOfferType(n),
+          title: (document.getElementById(`offer${n}Title`) || {}).value || "",
+          desc:  (document.getElementById(`offer${n}Desc`)  || {}).value || "",
+          price: (document.getElementById(`offer${n}Price`) || {}).value || ""
+        };
+      });
       saveOffers(offers);
       renderOffers();
       const btn = saveOffersBtn;
@@ -2375,7 +2625,26 @@
     });
     clearBtn.addEventListener("click", () => closePaymentModal({ recordSaleOnClose: false }));
     payBtn.addEventListener("click", () => openPaymentModal());
-    payCloseBtn.addEventListener("click", () => closePaymentModal({ recordSaleOnClose: true }));
+    document.getElementById("payRegisterBtn").addEventListener("click", () => {
+      const cart = getCart();
+      const total = cart.reduce((s,i) => s + i.sum, 0);
+      saveReceipt(state.currentReceiptId, cart, total);
+      recordSale(cart);
+      payOverlay.classList.remove("active");
+      payOverlay.setAttribute("aria-hidden", "true");
+      swishQr.innerHTML = "";
+      clearCartState();
+    });
+    document.getElementById("payReceiptBtn").addEventListener("click", () => {
+      const cart = getCart();
+      const total = cart.reduce((s,i) => s + i.sum, 0);
+      saveReceipt(state.currentReceiptId, cart, total);
+      recordSale(cart);
+      payOverlay.classList.remove("active");
+      payOverlay.setAttribute("aria-hidden", "true");
+      swishQr.innerHTML = "";
+      showReceipt();
+    });
     payOverlay.addEventListener("click", e => {
       if (e.target === payOverlay) closePaymentModal({ recordSaleOnClose: true });
     });
@@ -2409,6 +2678,54 @@
       if (action === "remove-item")     removeItemFromCategory(catKey, itemId);
       if (action === "remove-category") removeCategory(catKey);
     });
+
+    /* ── Receipt feature ── */
+    let receiptCountdownInterval = null;
+
+    function showReceipt() {
+      const receiptId = state.currentReceiptId;
+      const cart = state.currentCart || getCart();
+      const total = cart.reduce((s, i) => s + i.sum, 0);
+
+      document.getElementById("receiptIdDisplay").textContent = `#${receiptId}`;
+      document.getElementById("receiptTimeDisplay").textContent =
+        new Date().toLocaleString("sv-SE");
+      document.getElementById("receiptTotalDisplay").textContent = formatKr(total);
+      document.getElementById("receiptSwishRow").textContent =
+        `Swish-ref: Zivert Holms ${cart.reduce((s,i)=>s+i.qty,0)} varor KV-${receiptId}`;
+
+      document.getElementById("receiptItemsList").innerHTML = cart.map(i => `
+        <div class="receipt-item-row">
+          <span>${escapeHtml(i.qty)} × ${escapeHtml(i.name)}</span>
+          <span>${escapeHtml(i.sum)} kr</span>
+        </div>
+      `).join("");
+
+      let seconds = 15;
+      document.getElementById("receiptCountdown").textContent = seconds;
+
+      if (receiptCountdownInterval) clearInterval(receiptCountdownInterval);
+      receiptCountdownInterval = setInterval(() => {
+        seconds--;
+        document.getElementById("receiptCountdown").textContent = seconds;
+        if (seconds <= 0) {
+          clearInterval(receiptCountdownInterval);
+          closeReceipt();
+        }
+      }, 1000);
+
+      document.getElementById("receiptOverlay").classList.add("active");
+      document.getElementById("receiptOverlay").setAttribute("aria-hidden", "false");
+    }
+
+    function closeReceipt() {
+      if (receiptCountdownInterval) clearInterval(receiptCountdownInterval);
+      document.getElementById("receiptOverlay").classList.remove("active");
+      document.getElementById("receiptOverlay").setAttribute("aria-hidden", "true");
+      clearCartState();
+    }
+
+    document.getElementById("receiptCloseBtn").addEventListener("click", closeReceipt);
 
     /* ── Wish feature ── */
     function loadWishes() {
@@ -2512,6 +2829,92 @@
     document.getElementById("clearWishesBtn").addEventListener("click", () => {
       localStorage.removeItem(WISHES_STORAGE_KEY);
       renderWishes();
+    });
+
+    /* ── Receipts admin ── */
+    function renderReceiptsAdmin() {
+      const receipts = loadReceipts().slice().reverse();
+      const meta = document.getElementById("receiptsMetaText");
+      const list = document.getElementById("receiptsList");
+
+      meta.textContent = `Totalt ${receipts.length} registrerade kvitton.`;
+
+      if (!receipts.length) {
+        list.innerHTML = '<div class="report-empty">Inga kvitton registrerade ännu.</div>';
+        return;
+      }
+
+      list.innerHTML = receipts.map(r => `
+        <div class="report-group" style="margin-bottom:10px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+            <span style="font-size:24px;font-weight:700;color:#ffd966;">#${escapeHtml(r.id)}</span>
+            <span style="font-size:16px;color:rgba(255,255,255,.5);">${new Date(r.time).toLocaleString("sv-SE")}</span>
+          </div>
+          ${r.items.map(i => `
+            <div class="report-row">
+              <span>${escapeHtml(i.qty)} × ${escapeHtml(i.name)}</span>
+              <span>${escapeHtml(i.sum)} kr</span>
+            </div>
+          `).join("")}
+          <div style="margin-top:8px;font-size:22px;font-weight:700;color:#fff;text-align:right;">${escapeHtml(r.total)} kr</div>
+        </div>
+      `).join("");
+    }
+
+    /* ── Inventory editor ── */
+    function renderInventoryEditor() {
+      const inv = loadInventory();
+      const editor = document.getElementById("inventoryEditor");
+
+      editor.innerHTML = categories.map(cat => `
+        <div class="catalog-group" style="margin-bottom:12px;">
+          <div class="catalog-group-head">
+            <h4>${escapeHtml(cat.title)}</h4>
+          </div>
+          <div class="catalog-item-list">
+            ${cat.items.map(item => {
+              const stock = inv[item.id] !== undefined ? inv[item.id] : "";
+              const low = typeof stock === "number" && stock < 10;
+              return `
+                <div class="catalog-item-row">
+                  <div style="font-size:20px;color:#fff;">${escapeHtml(item.name)}</div>
+                  <div style="display:flex;align-items:center;gap:8px;">
+                    <input
+                      class="catalog-input catalog-price-input"
+                      type="number"
+                      min="0"
+                      step="1"
+                      inputmode="numeric"
+                      data-inv-id="${escapeHtml(item.id)}"
+                      value="${stock}"
+                      placeholder="Antal"
+                      style="width:100px;"
+                    />
+                    ${low ? `<span style="font-size:14px;color:#f87171;font-weight:700;">⚠ Lågt</span>` : ""}
+                  </div>
+                </div>
+              `;
+            }).join("")}
+          </div>
+        </div>
+      `).join("");
+    }
+
+    document.getElementById("saveInventoryBtn").addEventListener("click", () => {
+      const inv = loadInventory();
+      document.querySelectorAll("[data-inv-id]").forEach(input => {
+        const id = input.dataset.invId;
+        const val = parseInt(input.value);
+        if (!isNaN(val) && val >= 0) {
+          inv[id] = val;
+        }
+      });
+      saveInventory(inv);
+      renderInventoryEditor();
+      document.getElementById("inventorySaveStatus").textContent = "Lager sparat!";
+      setTimeout(() => {
+        document.getElementById("inventorySaveStatus").textContent = "Fyll i lagersaldon ovan.";
+      }, 2000);
     });
 
     /* ── Bootstrap ── */
