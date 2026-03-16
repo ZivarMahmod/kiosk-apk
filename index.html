@@ -1485,6 +1485,11 @@
                           <label class="admin-input-label">Adminlösenord</label>
                           <input class="admin-input" type="text" id="settingsPassword" placeholder="Nytt lösenord" />
                         </div>
+                        <div style="display:grid;gap:6px;">
+                          <label style="font-size:14px;letter-spacing:1px;color:rgba(255,255,255,.6);">KVITTO-LÖSENORD</label>
+                          <input class="catalog-input" type="password" id="receiptDeletePwInput" placeholder="Nuvarande: ••••••" />
+                          <div style="font-size:13px;color:rgba(255,255,255,.4);">Används för att tagga/avtagga kvitton som TEST.</div>
+                        </div>
                         <button class="admin-btn" id="saveSettingsBtn" type="button">Spara inställningar</button>
                         <p class="catalog-status" id="settingsSaveStatus"></p>
                       </div>
@@ -1504,14 +1509,33 @@
                       <div id="receiptsList"></div>
                     </div>
 
-                    <!-- Lager -->
+                    <!-- Lager & Stock -->
                     <div class="admin-section" id="adminSectionInventory">
-                      <h3 class="admin-section-title">Lagerhantering</h3>
-                      <div class="report-meta-text">Ange hur många du fyllt på. Systemet räknar ner vid varje köp. Varning visas när under 10 kvar.</div>
-                      <div id="inventoryEditor"></div>
-                      <div class="save-bar" style="margin-top:12px;display:flex;align-items:center;gap:12px;">
-                        <span id="inventorySaveStatus" style="font-size:16px;color:rgba(255,255,255,.5);">Fyll i lagersaldon ovan.</span>
-                        <button class="admin-btn" id="saveInventoryBtn" type="button">Spara lager</button>
+                      <h3 class="admin-section-title">Lager & Stock</h3>
+
+                      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+
+                        <!-- LAGER -->
+                        <div>
+                          <div style="font-size:20px;font-style:italic;color:#ffd966;margin-bottom:10px;">📦 Totalt lager — inköpt</div>
+                          <div style="font-size:13px;color:rgba(255,255,255,.45);margin-bottom:12px;">Fyll i när du köpt hem varor. Påfyllning till Stock minskar härifrån.</div>
+                          <div id="inventoryEditor"></div>
+                          <button class="catalog-small-btn" id="addInventoryRowBtn" type="button" style="margin-top:10px;">+ Lägg till rad</button>
+                        </div>
+
+                        <!-- STOCK -->
+                        <div>
+                          <div style="font-size:20px;font-style:italic;color:#6c63ff;margin-bottom:10px;">🏪 Stock — framme vid kiosken</div>
+                          <div style="font-size:13px;color:rgba(255,255,255,.45);margin-bottom:12px;">Fyll på från Lager. Köp minskar härifrån. Varning under 10 kvar.</div>
+                          <div id="stockEditor"></div>
+                          <button class="catalog-small-btn" id="addStockRowBtn" type="button" style="margin-top:10px;">+ Lägg till rad</button>
+                        </div>
+
+                      </div>
+
+                      <div class="save-bar" style="display:flex;align-items:center;gap:12px;">
+                        <span id="inventorySaveStatus" style="font-size:16px;color:rgba(255,255,255,.5);">Spara för att uppdatera.</span>
+                        <button class="admin-btn" id="saveInventoryBtn" type="button">Spara lager & stock</button>
                       </div>
                     </div>
 
@@ -1680,6 +1704,9 @@
     const RECEIPT_STORAGE_KEY = "zivert-holm-receipts-v1";
     const RECEIPT_COUNTER_KEY = "zivert-holm-receipt-counter-v1";
     const INVENTORY_STORAGE_KEY = "zivert-holm-inventory-v1";
+    const STOCK_STORAGE_KEY = "zivert-holm-stock-v1";
+    const RECEIPT_DELETE_PASSWORD_KEY = "zivert-holm-receipt-delete-pw-v1";
+    const DEFAULT_RECEIPT_DELETE_PASSWORD = "072940";
 
     /* ── Product images ── */
     const PRODUCT_IMAGES = {
@@ -1859,7 +1886,8 @@
         id: receiptId,
         time: new Date().toISOString(),
         items: cart.map(i => ({ name: i.name, qty: i.qty, sum: i.sum })),
-        total
+        total,
+        tagged: false
       });
       localStorage.setItem(RECEIPT_STORAGE_KEY, JSON.stringify(receipts));
     }
@@ -1873,6 +1901,20 @@
     }
     function saveInventory(inv) {
       localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(inv));
+    }
+
+    function loadStock() {
+      try {
+        const raw = localStorage.getItem(STOCK_STORAGE_KEY);
+        return raw ? JSON.parse(raw) : {};
+      } catch(e) { return {}; }
+    }
+    function saveStock(stock) {
+      localStorage.setItem(STOCK_STORAGE_KEY, JSON.stringify(stock));
+    }
+
+    function getReceiptDeletePassword() {
+      return localStorage.getItem(RECEIPT_DELETE_PASSWORD_KEY) || DEFAULT_RECEIPT_DELETE_PASSWORD;
     }
 
     /* ── Offers ── */
@@ -2051,7 +2093,7 @@
         if (section === "installningar") loadSettingsIntoEditor();
         if (section === "wishes") renderWishes();
         if (section === "receipts") renderReceiptsAdmin();
-        if (section === "inventory") renderInventoryEditor();
+        if (section === "inventory") { renderInventoryEditor(); renderStockEditor(); }
       });
     });
 
@@ -2228,14 +2270,15 @@
       });
       saveSales(sales);
 
-      // Minska lager
-      const inv = loadInventory();
+      // Minska stock
+      const stock = loadStock();
       cart.forEach(item => {
-        if (inv[item.itemId] !== undefined) {
-          inv[item.itemId] = Math.max(0, inv[item.itemId] - item.qty);
+        const key = item.name;
+        if (stock[key] !== undefined) {
+          stock[key] = Math.max(0, stock[key] - item.qty);
         }
       });
-      saveInventory(inv);
+      saveStock(stock);
     }
 
     function clearCartState() {
@@ -2603,6 +2646,10 @@
         password:    (passEl  ? passEl.value.trim()  : "") || current.password    || ""
       };
       saveSettings(next);
+      const newReceiptPw = document.getElementById("receiptDeletePwInput").value.trim();
+      if (newReceiptPw.length >= 4) {
+        localStorage.setItem(RECEIPT_DELETE_PASSWORD_KEY, newReceiptPw);
+      }
       settingsSaveStatus.textContent = "Inställningar sparade.";
       setTimeout(() => { settingsSaveStatus.textContent = ""; }, 2000);
     }
@@ -2837,7 +2884,11 @@
       const meta = document.getElementById("receiptsMetaText");
       const list = document.getElementById("receiptsList");
 
-      meta.textContent = `Totalt ${receipts.length} registrerade kvitton.`;
+      const taggedTotal = receipts
+        .filter(r => r.tagged)
+        .reduce((s, r) => s + Number(r.total), 0);
+
+      meta.textContent = `Totalt ${receipts.length} kvitton registrerade.${taggedTotal > 0 ? ` Varav ${receipts.filter(r=>r.tagged).length} taggade som TEST (−${taggedTotal} kr).` : ""}`;
 
       if (!receipts.length) {
         list.innerHTML = '<div class="report-empty">Inga kvitton registrerade ännu.</div>';
@@ -2845,10 +2896,21 @@
       }
 
       list.innerHTML = receipts.map(r => `
-        <div class="report-group" style="margin-bottom:10px;">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-            <span style="font-size:24px;font-weight:700;color:#ffd966;">#${escapeHtml(r.id)}</span>
-            <span style="font-size:16px;color:rgba(255,255,255,.5);">${new Date(r.time).toLocaleString("sv-SE")}</span>
+        <div class="report-group" style="margin-bottom:10px;${r.tagged ? 'opacity:.55;border:1px solid rgba(255,180,0,.3);' : ''}">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:8px;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span style="font-size:24px;font-weight:700;color:#ffd966;">#${escapeHtml(r.id)}</span>
+              ${r.tagged ? '<span style="font-size:12px;background:rgba(255,180,0,.2);color:#ffd966;padding:3px 10px;border-radius:6px;letter-spacing:1px;">TEST</span>' : ''}
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span style="font-size:14px;color:rgba(255,255,255,.45);">${new Date(r.time).toLocaleString("sv-SE")}</span>
+              <button
+                class="catalog-small-btn"
+                type="button"
+                data-receipt-tag="${escapeHtml(r.id)}"
+                style="font-size:13px;padding:4px 12px;"
+              >${r.tagged ? "Avmarkera TEST" : "Tagga som TEST"}</button>
+            </div>
           </div>
           ${r.items.map(i => `
             <div class="report-row">
@@ -2856,64 +2918,209 @@
               <span>${escapeHtml(i.sum)} kr</span>
             </div>
           `).join("")}
-          <div style="margin-top:8px;font-size:22px;font-weight:700;color:#fff;text-align:right;">${escapeHtml(r.total)} kr</div>
+          <div style="margin-top:8px;font-size:22px;font-weight:700;color:#fff;text-align:right;">${r.tagged ? '<span style="text-decoration:line-through;opacity:.5;">'+escapeHtml(r.total)+' kr</span>' : escapeHtml(r.total)+' kr'}</div>
         </div>
       `).join("");
     }
 
-    /* ── Inventory editor ── */
+    document.getElementById("receiptsList").addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-receipt-tag]");
+      if (!btn) return;
+
+      const receiptId = btn.dataset.receiptTag;
+      const pw = prompt("Ange lösenord för att ändra kvitto:");
+      if (pw !== getReceiptDeletePassword()) {
+        alert("Fel lösenord.");
+        return;
+      }
+
+      const receipts = loadReceipts();
+      const receipt = receipts.find(r => r.id === receiptId);
+      if (!receipt) return;
+
+      receipt.tagged = !receipt.tagged;
+      localStorage.setItem(RECEIPT_STORAGE_KEY, JSON.stringify(receipts));
+      renderReceiptsAdmin();
+    });
+
+    /* ── Inventory & Stock editor ── */
+    function getProductNames() {
+      const names = new Set();
+      categories.forEach(cat => cat.items.forEach(item => names.add(item.name)));
+      return names;
+    }
+
+    function getMatchStatus(name) {
+      if (!name || !name.trim()) return "empty";
+      const names = getProductNames();
+      return names.has(name.trim()) ? "match" : "nomatch";
+    }
+
+    function matchStatusHtml(name) {
+      const status = getMatchStatus(name);
+      if (status === "empty") return "";
+      if (status === "match") return `<span style="font-size:12px;color:#4ade80;">✅ Kopplad till: ${escapeHtml(name)}</span>`;
+      return `<span style="font-size:12px;color:#fbbf24;">⚠️ Ingen match — kontrollera stavning</span>`;
+    }
+
     function renderInventoryEditor() {
       const inv = loadInventory();
       const editor = document.getElementById("inventoryEditor");
+      const rows = Object.entries(inv);
 
-      editor.innerHTML = categories.map(cat => `
-        <div class="catalog-group" style="margin-bottom:12px;">
-          <div class="catalog-group-head">
-            <h4>${escapeHtml(cat.title)}</h4>
+      if (!rows.length) {
+        editor.innerHTML = '<div style="font-size:14px;color:rgba(255,255,255,.35);margin-bottom:8px;">Inga rader ännu.</div>';
+        return;
+      }
+
+      editor.innerHTML = rows.map(([name, qty]) => `
+        <div class="catalog-item-row" style="margin-bottom:8px;display:grid;grid-template-columns:1fr 80px auto;gap:8px;align-items:start;">
+          <div>
+            <input
+              class="catalog-input inv-name-input"
+              type="text"
+              data-inv-name="${escapeHtml(name)}"
+              value="${escapeHtml(name)}"
+              placeholder="Produktnamn (exakt)"
+              style="width:100%;margin-bottom:4px;"
+            />
+            <div class="inv-match-status">${matchStatusHtml(name)}</div>
           </div>
-          <div class="catalog-item-list">
-            ${cat.items.map(item => {
-              const stock = inv[item.id] !== undefined ? inv[item.id] : "";
-              const low = typeof stock === "number" && stock < 10;
-              return `
-                <div class="catalog-item-row">
-                  <div style="font-size:20px;color:#fff;">${escapeHtml(item.name)}</div>
-                  <div style="display:flex;align-items:center;gap:8px;">
-                    <input
-                      class="catalog-input catalog-price-input"
-                      type="number"
-                      min="0"
-                      step="1"
-                      inputmode="numeric"
-                      data-inv-id="${escapeHtml(item.id)}"
-                      value="${stock}"
-                      placeholder="Antal"
-                      style="width:100px;"
-                    />
-                    ${low ? `<span style="font-size:14px;color:#f87171;font-weight:700;">⚠ Lågt</span>` : ""}
-                  </div>
-                </div>
-              `;
-            }).join("")}
-          </div>
+          <input
+            class="catalog-price-input inv-qty-input"
+            type="number"
+            min="0"
+            step="1"
+            data-inv-name="${escapeHtml(name)}"
+            value="${qty}"
+            placeholder="Antal"
+          />
+          <button class="catalog-small-btn danger inv-remove-btn" type="button" data-inv-remove="${escapeHtml(name)}">✕</button>
         </div>
       `).join("");
+
+      // Live validering
+      editor.querySelectorAll(".inv-name-input").forEach(input => {
+        input.addEventListener("input", () => {
+          const statusDiv = input.closest(".catalog-item-row").querySelector(".inv-match-status");
+          statusDiv.innerHTML = matchStatusHtml(input.value);
+        });
+      });
+
+      // Ta bort rad
+      editor.querySelectorAll(".inv-remove-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const inv = loadInventory();
+          delete inv[btn.dataset.invRemove];
+          saveInventory(inv);
+          renderInventoryEditor();
+        });
+      });
     }
 
-    document.getElementById("saveInventoryBtn").addEventListener("click", () => {
-      const inv = loadInventory();
-      document.querySelectorAll("[data-inv-id]").forEach(input => {
-        const id = input.dataset.invId;
-        const val = parseInt(input.value);
-        if (!isNaN(val) && val >= 0) {
-          inv[id] = val;
-        }
+    function renderStockEditor() {
+      const stock = loadStock();
+      const editor = document.getElementById("stockEditor");
+      const rows = Object.entries(stock);
+
+      if (!rows.length) {
+        editor.innerHTML = '<div style="font-size:14px;color:rgba(255,255,255,.35);margin-bottom:8px;">Inga rader ännu.</div>';
+        return;
+      }
+
+      editor.innerHTML = rows.map(([name, qty]) => {
+        const low = typeof qty === "number" && qty < 10;
+        return `
+          <div class="catalog-item-row" style="margin-bottom:8px;display:grid;grid-template-columns:1fr 80px auto;gap:8px;align-items:start;">
+            <div>
+              <input
+                class="catalog-input stock-name-input"
+                type="text"
+                data-stock-name="${escapeHtml(name)}"
+                value="${escapeHtml(name)}"
+                placeholder="Produktnamn (exakt)"
+                style="width:100%;margin-bottom:4px;"
+              />
+              <div class="stock-match-status">${matchStatusHtml(name)}</div>
+              ${low ? '<span style="font-size:12px;color:#f87171;font-weight:700;">⚠ Under 10 kvar!</span>' : ''}
+            </div>
+            <input
+              class="catalog-price-input stock-qty-input"
+              type="number"
+              min="0"
+              step="1"
+              data-stock-name="${escapeHtml(name)}"
+              value="${qty}"
+              placeholder="Antal"
+            />
+            <button class="catalog-small-btn danger stock-remove-btn" type="button" data-stock-remove="${escapeHtml(name)}">✕</button>
+          </div>
+        `;
+      }).join("");
+
+      // Live validering
+      editor.querySelectorAll(".stock-name-input").forEach(input => {
+        input.addEventListener("input", () => {
+          const statusDiv = input.closest(".catalog-item-row").querySelector(".stock-match-status");
+          statusDiv.innerHTML = matchStatusHtml(input.value);
+        });
       });
+
+      // Ta bort rad
+      editor.querySelectorAll(".stock-remove-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const stock = loadStock();
+          delete stock[btn.dataset.stockRemove];
+          saveStock(stock);
+          renderStockEditor();
+        });
+      });
+    }
+
+    document.getElementById("addInventoryRowBtn").addEventListener("click", () => {
+      const inv = loadInventory();
+      inv["Ny produkt " + Date.now()] = 0;
       saveInventory(inv);
       renderInventoryEditor();
-      document.getElementById("inventorySaveStatus").textContent = "Lager sparat!";
+    });
+
+    document.getElementById("addStockRowBtn").addEventListener("click", () => {
+      const stock = loadStock();
+      stock["Ny produkt " + Date.now()] = 0;
+      saveStock(stock);
+      renderStockEditor();
+    });
+
+    document.getElementById("saveInventoryBtn").addEventListener("click", () => {
+      const newInv = {};
+      document.querySelectorAll(".inv-name-input").forEach(nameInput => {
+        const row = nameInput.closest(".catalog-item-row");
+        const qtyInput = row.querySelector(".inv-qty-input");
+        const name = nameInput.value.trim();
+        const qty = parseInt(qtyInput.value);
+        if (name && !isNaN(qty) && qty >= 0) {
+          newInv[name] = qty;
+        }
+      });
+
+      const newStock = {};
+      document.querySelectorAll(".stock-name-input").forEach(nameInput => {
+        const row = nameInput.closest(".catalog-item-row");
+        const qtyInput = row.querySelector(".stock-qty-input");
+        const name = nameInput.value.trim();
+        const qty = parseInt(qtyInput.value);
+        if (name && !isNaN(qty) && qty >= 0) {
+          newStock[name] = qty;
+        }
+      });
+
+      saveInventory(newInv);
+      saveStock(newStock);
+      renderInventoryEditor();
+      renderStockEditor();
+      document.getElementById("inventorySaveStatus").textContent = "Lager & stock sparat!";
       setTimeout(() => {
-        document.getElementById("inventorySaveStatus").textContent = "Fyll i lagersaldon ovan.";
+        document.getElementById("inventorySaveStatus").textContent = "Spara för att uppdatera.";
       }, 2000);
     });
 
