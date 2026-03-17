@@ -5593,10 +5593,23 @@
       ss.style.animation = 'ssFadeIn 1.5s ease forwards';
     }
 
-    function döljeScreensaver() {
+    function döljeScreensaver(e) {
+      if (e) { e.stopPropagation(); e.preventDefault(); }
       const ss = document.getElementById('screensaver');
       ss.style.animation = 'ssFadeOut 0.8s ease forwards';
-      setTimeout(() => { ss.style.display = 'none'; }, 800);
+      setTimeout(() => {
+        ss.style.display = 'none';
+        // Gå till startsidan
+        if (IS_MOBILE_VIEW) {
+          const catView = document.getElementById("mobileCategoryView");
+          if (catView && catView.style.display !== "none") {
+            const backBtn = document.getElementById("mobileBackBtn");
+            if (backBtn) backBtn.click();
+          }
+        } else {
+          openOverview();
+        }
+      }, 800);
     }
 
     function återställTimer() {
