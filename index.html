@@ -307,44 +307,47 @@
     /* Erbjudande-pil-bubbla */
     .erbjudande-pil-wrapper {
       display: flex;
-      align-items: flex-start;
-      margin-top: -8px;
-      margin-left: 20px;
+      align-items: center;
+      margin-left: 16px;
+      flex-shrink: 0;
     }
     .erbjudande-pil-bubbla {
       background: linear-gradient(135deg, #72383D, #8B4449);
       color: #EFE9E1;
-      border-radius: 16px;
-      padding: 12px 18px;
+      border-radius: 14px;
+      padding: 10px 14px;
       font-family: Georgia, serif;
       text-align: center;
       box-shadow: 0 4px 15px rgba(114,56,61,0.4);
       animation: pilHopp 1.8s ease-in-out infinite;
       position: relative;
-      max-width: 180px;
+      max-width: 140px;
+      white-space: nowrap;
     }
     .erbjudande-pil-bubbla::before {
       content: '';
       position: absolute;
-      top: -12px;
-      left: 30px;
-      border-width: 0 10px 12px;
+      left: -10px;
+      top: 50%;
+      transform: translateY(-50%);
+      border-width: 8px 10px 8px 0;
       border-style: solid;
-      border-color: transparent transparent #72383D;
+      border-color: transparent #72383D transparent transparent;
     }
     .pil-emoji {
-      font-size: 24px;
+      font-size: 18px;
       display: block;
       animation: pilPeka 1s ease-in-out infinite alternate;
+      margin-bottom: 2px;
     }
     .pil-text {
-      font-size: 13px;
+      font-size: 11px;
       font-weight: bold;
       color: #EFE9E1;
-      margin: 4px 0 2px;
+      margin: 2px 0 1px;
     }
     .pil-subtext {
-      font-size: 12px;
+      font-size: 10px;
       color: #D1C7BD;
       margin: 0;
     }
@@ -1872,6 +1875,9 @@
                 <div>
                   <h2 class="section-title" style="font-size:36px;">Just nu</h2>
                   <div class="offers-grid" id="offersGrid"></div>
+                </div>
+                <div class="wish-row">
+                  <button class="wish-trigger-btn" id="wishTriggerBtn" type="button">💌 Önska en produkt</button>
                   <div class="erbjudande-pil-wrapper" id="erbjudandePilWrapper">
                     <div class="erbjudande-pil-bubbla">
                       <span class="pil-emoji">👆</span>
@@ -1879,9 +1885,6 @@
                       <p class="pil-subtext">Tryck & spara 5 kr 🎉</p>
                     </div>
                   </div>
-                </div>
-                <div class="wish-row">
-                  <button class="wish-trigger-btn" id="wishTriggerBtn" type="button">💌 Önska en produkt</button>
                 </div>
               </div>
             </section>
@@ -1973,6 +1976,15 @@
                           <input class="admin-input" type="text" id="bubblaTextRad2" placeholder="Tryck & spara 5 kr 🎉" />
                         </div>
                         <button class="admin-btn" id="saveBubblaBtn" type="button" style="margin-top:8px;">Spara bubbla-inställningar</button>
+                      </div>
+
+                      <div class="offer-edit-card" style="margin-top:20px;">
+                        <h4>Ja, tack!-knapp</h4>
+                        <div style="display:flex;align-items:center;gap:10px;">
+                          <input type="checkbox" id="visaValjKnappToggle" />
+                          <label for="visaValjKnappToggle" style="font-family:Georgia,serif;color:#2c3e35;">Visa "Ja, tack!"-knapp på erbjudanden</label>
+                        </div>
+                        <button class="admin-btn" id="saveValjKnappBtn" type="button" style="margin-top:8px;">Spara</button>
                       </div>
                     </div>
 
@@ -2358,6 +2370,7 @@
     const RENSA_PW_KEY = "zivert-holm-rensa-pw-v1";
     const DEFAULT_RENSA_PW = "123456";
     const BUBBLA_STORAGE_KEY = "zivert-holm-bubbla-v1";
+    const VAJL_KNAPP_STORAGE_KEY = "zivert-holm-vajl-knapp-v1";
     const IS_MOBILE_VIEW = window.location.search.includes("mobile") || window.innerWidth < 768;
 
     function getMobileAdminPassword() {
@@ -2380,7 +2393,8 @@
       [MOBILE_ADMIN_PW_KEY]:        "mobileAdminPw",
       [RECEIPT_DELETE_PASSWORD_KEY]: "receiptDeletePw",
       [RENSA_PW_KEY]:               "rensaLösenord",
-      [BUBBLA_STORAGE_KEY]:          "bubblainställningar"
+      [BUBBLA_STORAGE_KEY]:          "bubblainställningar",
+      [VAJL_KNAPP_STORAGE_KEY]:      "valjKnappInstallningar"
     };
     // Settings uses literal string in some places
     const FB_SETTINGS_KEY = "installningar";
@@ -2453,6 +2467,7 @@
         if (data.receiptDeletePw) localStorage.setItem(RECEIPT_DELETE_PASSWORD_KEY, data.receiptDeletePw);
         if (data["rensaLösenord"])  localStorage.setItem(RENSA_PW_KEY, data["rensaLösenord"]);
         if (data["bubblainställningar"]) localStorage.setItem(BUBBLA_STORAGE_KEY, JSON.stringify(data["bubblainställningar"]));
+        if (data["valjKnappInstallningar"]) localStorage.setItem(VAJL_KNAPP_STORAGE_KEY, JSON.stringify(data["valjKnappInstallningar"]));
         if (data.nolladAllt)       localStorage.setItem(NOLLA_ALLT_KEY, "true");
         _fbSyncPaused = false;
         _fbReady = true;
@@ -2534,6 +2549,7 @@
         if (data.onskningar)  localStorage.setItem(WISHES_STORAGE_KEY, JSON.stringify(data.onskningar));
         if (data.taggar)      localStorage.setItem(TAGS_STORAGE_KEY, JSON.stringify(data.taggar));
         if (data["bubblainställningar"]) localStorage.setItem(BUBBLA_STORAGE_KEY, JSON.stringify(data["bubblainställningar"]));
+        if (data["valjKnappInstallningar"]) localStorage.setItem(VAJL_KNAPP_STORAGE_KEY, JSON.stringify(data["valjKnappInstallningar"]));
         if (data.kvitton && Array.isArray(data.kvitton)) {
           localStorage.setItem(RECEIPT_STORAGE_KEY, JSON.stringify(data.kvitton));
         }
@@ -2848,6 +2864,19 @@
       fbSyncAfterSave(BUBBLA_STORAGE_KEY);
     }
 
+    /* ── Välj-knapp-inställningar ── */
+    const DEFAULT_VAJL_KNAPP = { visaValjKnapp: true };
+    function loadValjKnappInstallningar() {
+      try {
+        const raw = localStorage.getItem(VAJL_KNAPP_STORAGE_KEY);
+        return raw ? { ...DEFAULT_VAJL_KNAPP, ...JSON.parse(raw) } : { ...DEFAULT_VAJL_KNAPP };
+      } catch(e) { return { ...DEFAULT_VAJL_KNAPP }; }
+    }
+    function saveValjKnappInstallningar(data) {
+      localStorage.setItem(VAJL_KNAPP_STORAGE_KEY, JSON.stringify(data));
+      fbSyncAfterSave(VAJL_KNAPP_STORAGE_KEY);
+    }
+
     /* ── Catalog ── */
     function normalizeCatalog(raw) {
       if (!Array.isArray(raw) || !raw.length) return cloneDefaultCategories();
@@ -3008,7 +3037,7 @@
         showAdminSection(section);
         if (section === "report") renderReport(state.currentReportMode);
         if (section === "products") renderCatalogEditor();
-        if (section === "offers") { loadOffersIntoEditor(); loadBubblaIntoEditor(); }
+        if (section === "offers") { loadOffersIntoEditor(); loadBubblaIntoEditor(); loadValjKnappIntoEditor(); }
         if (section === "settings") initSettingsForm();
         if (section === "wishes") renderWishes();
         if (section === "receipts") renderReceiptsAdmin();
@@ -3038,6 +3067,7 @@
     function renderOffers() {
       const offers = loadOffers();
       const bubblaInst = loadBubblaInställningar();
+      const valjKnappInst = loadValjKnappInstallningar();
       offersGrid.innerHTML = offers.map((o, i) => `
         <div class="offer-card" style="cursor:pointer;display:flex;align-items:center;gap:12px;" data-offer-idx="${i}">
           <div class="offer-pill">${escapeHtml(o.type)}</div>
@@ -3046,7 +3076,7 @@
             <div class="offer-desc">${escapeHtml(o.desc)}</div>
             ${o.price ? `<div class="offer-price">${escapeHtml(o.price)}</div>` : ""}
           </div>
-          ${o.paketpris ? `<button class="erbjudande-välj-knapp" data-offer-idx="${i}">Ja, tack! 🛒</button>` : ""}
+          ${o.paketpris && valjKnappInst.visaValjKnapp ? `<button class="erbjudande-välj-knapp" data-offer-idx="${i}">Ja, tack! 🛒</button>` : ""}
         </div>
       `).join("");
 
@@ -3952,6 +3982,13 @@
       if (rad1) rad1.value = b.textRad1;
       if (rad2) rad2.value = b.textRad2;
     }
+
+    /* ── Välj-knapp editor ── */
+    function loadValjKnappIntoEditor() {
+      const v = loadValjKnappInstallningar();
+      const toggle = document.getElementById("visaValjKnappToggle");
+      if (toggle) toggle.checked = v.visaValjKnapp;
+    }
     document.getElementById("saveBubblaBtn").addEventListener("click", () => {
       const data = {
         visaBubbla: document.getElementById("bubblaVisaToggle").checked,
@@ -3963,6 +4000,17 @@
       const btn = document.getElementById("saveBubblaBtn");
       btn.textContent = "Sparat ✓";
       setTimeout(() => { btn.textContent = "Spara bubbla-inställningar"; }, 1400);
+    });
+
+    document.getElementById("saveValjKnappBtn").addEventListener("click", () => {
+      const data = {
+        visaValjKnapp: document.getElementById("visaValjKnappToggle").checked
+      };
+      saveValjKnappInstallningar(data);
+      renderOffers();
+      const btn = document.getElementById("saveValjKnappBtn");
+      btn.textContent = "Sparat ✓";
+      setTimeout(() => { btn.textContent = "Spara"; }, 1400);
     });
 
     /* ── Settings editor ── */
