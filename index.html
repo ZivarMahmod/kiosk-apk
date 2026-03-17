@@ -1446,59 +1446,59 @@
   </style>
 </head>
 <body>
+  <!-- MOBILE APP (utanför viewport/stage) -->
+  <div id="mobileApp" style="display:none;width:100%;min-height:100vh;background:linear-gradient(135deg,#0f0c29,#302b63,#24243e);font-family:Georgia,serif;color:#fff;">
+
+    <!-- MOBIL HEADER -->
+    <div style="background:rgba(0,0,0,.5);backdrop-filter:blur(10px);padding:16px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;border-bottom:1px solid rgba(255,255,255,.08);">
+      <div id="mobileLogoTrigger" style="font-size:24px;font-style:italic;color:#fff;cursor:pointer;user-select:none;">
+        ZH
+      </div>
+      <div style="font-size:13px;color:rgba(255,255,255,.5);letter-spacing:1px;">ZIVERT HOLMS HÖRNA</div>
+      <div style="width:40px;"></div>
+    </div>
+
+    <!-- MOBIL STARTSIDA -->
+    <div id="mobileOverview" style="padding:20px;">
+      <div style="margin-bottom:24px;">
+        <h1 style="font-size:32px;font-style:italic;color:#fff;margin:0 0 6px;">Vad tar du idag?</h1>
+        <p style="font-size:13px;color:rgba(255,255,255,.5);letter-spacing:1px;margin:0;">BLÄDDRA I UTBUDET</p>
+      </div>
+
+      <!-- Erbjudanden -->
+      <div id="mobileOffers" style="display:grid;gap:10px;margin-bottom:24px;"></div>
+
+      <!-- Kategorikort -->
+      <div id="mobileCatGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;"></div>
+    </div>
+
+    <!-- MOBIL KATEGORIVY -->
+    <div id="mobileCategoryView" style="display:none;padding:20px;">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+        <button id="mobileBackBtn" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:10px;color:#fff;font-family:Georgia,serif;font-size:16px;padding:8px 16px;cursor:pointer;">← Tillbaka</button>
+        <h2 id="mobileCatTitle" style="font-size:26px;font-style:italic;color:#fff;margin:0;"></h2>
+      </div>
+      <div id="mobileProductGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;"></div>
+    </div>
+
+    <!-- MOBIL ADMIN-TRIGGER OVERLAY -->
+    <div id="mobileAdminOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;align-items:center;justify-content:center;">
+      <div style="background:linear-gradient(160deg,#1e1b3a,#2d2b50);border:1px solid rgba(255,255,255,.12);border-radius:22px;padding:28px;width:320px;display:flex;flex-direction:column;gap:16px;">
+        <div style="font-size:26px;font-style:italic;color:#fff;text-align:center;">Admin</div>
+        <input class="catalog-input" type="password" id="mobileAdminPwInput" placeholder="Lösenord" autocomplete="off" />
+        <div style="font-size:14px;color:#f87171;min-height:18px;text-align:center;" id="mobileAdminPwError"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <button style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:10px;color:#fff;font-family:Georgia,serif;font-size:16px;padding:10px;cursor:pointer;" id="mobileAdminCancelBtn">Avbryt</button>
+          <button style="background:linear-gradient(135deg,#6c63ff,#3b82f6);border:none;border-radius:10px;color:#fff;font-family:Georgia,serif;font-size:16px;font-weight:700;padding:10px;cursor:pointer;" id="mobileAdminConfirmBtn">Logga in</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
   <div class="viewport">
     <div class="stage" id="stage">
       <div class="app">
-
-        <!-- MOBILE APP -->
-        <div id="mobileApp" style="display:none;width:100%;min-height:100vh;background:linear-gradient(135deg,#0f0c29,#302b63,#24243e);font-family:Georgia,serif;color:#fff;">
-
-          <!-- MOBIL HEADER -->
-          <div style="background:rgba(0,0,0,.5);backdrop-filter:blur(10px);padding:16px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;border-bottom:1px solid rgba(255,255,255,.08);">
-            <div id="mobileLogoTrigger" style="font-size:24px;font-style:italic;color:#fff;cursor:pointer;user-select:none;">
-              ZH
-            </div>
-            <div style="font-size:13px;color:rgba(255,255,255,.5);letter-spacing:1px;">ZIVERT HOLMS HÖRNA</div>
-            <div style="width:40px;"></div>
-          </div>
-
-          <!-- MOBIL STARTSIDA -->
-          <div id="mobileOverview" style="padding:20px;">
-            <div style="margin-bottom:24px;">
-              <h1 style="font-size:32px;font-style:italic;color:#fff;margin:0 0 6px;">Vad tar du idag?</h1>
-              <p style="font-size:13px;color:rgba(255,255,255,.5);letter-spacing:1px;margin:0;">BLÄDDRA I UTBUDET</p>
-            </div>
-
-            <!-- Erbjudanden -->
-            <div id="mobileOffers" style="display:grid;gap:10px;margin-bottom:24px;"></div>
-
-            <!-- Kategorikort -->
-            <div id="mobileCatGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;"></div>
-          </div>
-
-          <!-- MOBIL KATEGORIVY -->
-          <div id="mobileCategoryView" style="display:none;padding:20px;">
-            <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
-              <button id="mobileBackBtn" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:10px;color:#fff;font-family:Georgia,serif;font-size:16px;padding:8px 16px;cursor:pointer;">← Tillbaka</button>
-              <h2 id="mobileCatTitle" style="font-size:26px;font-style:italic;color:#fff;margin:0;"></h2>
-            </div>
-            <div id="mobileProductGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;"></div>
-          </div>
-
-          <!-- MOBIL ADMIN-TRIGGER OVERLAY -->
-          <div id="mobileAdminOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;align-items:center;justify-content:center;">
-            <div style="background:linear-gradient(160deg,#1e1b3a,#2d2b50);border:1px solid rgba(255,255,255,.12);border-radius:22px;padding:28px;width:320px;display:flex;flex-direction:column;gap:16px;">
-              <div style="font-size:26px;font-style:italic;color:#fff;text-align:center;">Admin</div>
-              <input class="catalog-input" type="password" id="mobileAdminPwInput" placeholder="Lösenord" autocomplete="off" />
-              <div style="font-size:14px;color:#f87171;min-height:18px;text-align:center;" id="mobileAdminPwError"></div>
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-                <button style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:10px;color:#fff;font-family:Georgia,serif;font-size:16px;padding:10px;cursor:pointer;" id="mobileAdminCancelBtn">Avbryt</button>
-                <button style="background:linear-gradient(135deg,#6c63ff,#3b82f6);border:none;border-radius:10px;color:#fff;font-family:Georgia,serif;font-size:16px;font-weight:700;padding:10px;cursor:pointer;" id="mobileAdminConfirmBtn">Logga in</button>
-              </div>
-            </div>
-          </div>
-
-        </div>
 
         <!-- Orbs -->
         <div class="orb orb1"></div>
@@ -2018,7 +2018,7 @@
     const TAGS_STORAGE_KEY = "zivert-holm-tags-v1";
     const MOBILE_ADMIN_PW_KEY = "zivert-holm-mobile-admin-pw-v1";
     const DEFAULT_MOBILE_ADMIN_PW = "123456";
-    const IS_MOBILE_VIEW = new URLSearchParams(window.location.search).has("mobile") || window.innerWidth < 768;
+    const IS_MOBILE_VIEW = window.location.search.includes("mobile") || window.innerWidth < 768;
 
     function getMobileAdminPassword() {
       return localStorage.getItem(MOBILE_ADMIN_PW_KEY) || DEFAULT_MOBILE_ADMIN_PW;
@@ -3838,8 +3838,6 @@
     let mobileTapTimer = null;
 
     function initMobileView() {
-      document.getElementById("mobileApp").style.display = "block";
-      document.querySelector(".viewport").style.display = "none";
       document.body.style.overflow = "auto";
       document.body.style.background = "linear-gradient(135deg,#0f0c29,#302b63,#24243e)";
       renderMobileOverview();
@@ -3965,6 +3963,8 @@
     renderSummary();
     openOverview();
     if (IS_MOBILE_VIEW) {
+      document.getElementById("mobileApp").style.display = "block";
+      document.querySelector(".viewport").style.display = "none";
       initMobileView();
     } else {
       fitStage();
