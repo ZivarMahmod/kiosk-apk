@@ -2076,6 +2076,24 @@
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <!-- Firebase SDK (compat) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+  <script>
+    /* ── Firebase init ── */
+    const _firebaseApp = firebase.initializeApp({
+      apiKey: "AIzaSyCjLMN3qVOyn0M5Eu7P0EtA9rnqzAto5Zw",
+      authDomain: "zivert-holm.firebaseapp.com",
+      databaseURL: "https://zivert-holm-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "zivert-holm",
+      storageBucket: "zivert-holm.firebasestorage.app",
+      messagingSenderId: "1078871076184",
+      appId: "1:1078871076184:web:573fc9d2d7ddb621fa892d"
+    });
+    const _fbDb = firebase.database();
+    window._fbDb = _fbDb;
+  </script>
+
   <script>
   (() => {
     /* ── Constants (never change these) ── */
@@ -2104,6 +2122,139 @@
       return localStorage.getItem(MOBILE_ADMIN_PW_KEY) || DEFAULT_MOBILE_ADMIN_PW;
     }
 
+    /* ── Firebase sync layer ── */
+    const FB_KEY_MAP = {
+      [CATALOG_STORAGE_KEY]:        "produkter",
+      [INVENTORY_STORAGE_KEY]:      "lager",
+      [OFFERS_STORAGE_KEY]:         "erbjudanden",
+      [SALES_STORAGE_KEY]:          "rapport",
+      [RECEIPT_STORAGE_KEY]:        "kvitton",
+      [WISHES_STORAGE_KEY]:         "onskningar",
+      [TAGS_STORAGE_KEY]:           "taggar",
+      [RECEIPT_COUNTER_KEY]:        "receiptCounter",
+      [MOBILE_ADMIN_PW_KEY]:        "mobileAdminPw",
+      [RECEIPT_DELETE_PASSWORD_KEY]: "receiptDeletePw"
+    };
+    // Settings uses literal string in some places
+    const FB_SETTINGS_KEY = "installningar";
+
+    let _fbReady = false;
+    let _fbSyncPaused = false; // pause during incoming sync to avoid loops
+
+    function fbWrite(fbPath, data) {
+      if (!window._fbDb || _fbSyncPaused) return;
+      window._fbDb.ref(fbPath).set(data).catch(e => console.warn("Firebase write failed:", fbPath, e));
+    }
+
+    function fbSyncAfterSave(localStorageKey) {
+      if (!window._fbDb || _fbSyncPaused) return;
+      const fbPath = FB_KEY_MAP[localStorageKey];
+      if (!fbPath) return;
+      try {
+        const raw = localStorage.getItem(localStorageKey);
+        const data = raw ? JSON.parse(raw) : null;
+        fbWrite(fbPath, data);
+      } catch(e) { /* ignore parse errors */ }
+    }
+
+    function fbSyncSettings() {
+      if (!window._fbDb || _fbSyncPaused) return;
+      try {
+        const raw = localStorage.getItem("zivert-holm-settings-v1");
+        const data = raw ? JSON.parse(raw) : {};
+        fbWrite(FB_SETTINGS_KEY, data);
+      } catch(e) {}
+    }
+
+    // Sync a plain string value (passwords, counters)
+    function fbSyncPlain(localStorageKey) {
+      if (!window._fbDb || _fbSyncPaused) return;
+      const fbPath = FB_KEY_MAP[localStorageKey];
+      if (!fbPath) return;
+      const val = localStorage.getItem(localStorageKey);
+      fbWrite(fbPath, val);
+    }
+
+    /* ── Load from Firebase at startup ── */
+    async function loadFromFirebase() {
+      if (!window._fbDb) return false;
+      try {
+        const snap = await Promise.race([
+          window._fbDb.ref("/").once("value"),
+          new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 3000))
+        ]);
+        if (!snap.exists()) return false; // empty DB → will migrate
+        const data = snap.val();
+        _fbSyncPaused = true;
+        if (data.produkter)       localStorage.setItem(CATALOG_STORAGE_KEY, JSON.stringify(data.produkter));
+        if (data.lager)           localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(data.lager));
+        if (data.erbjudanden)     localStorage.setItem(OFFERS_STORAGE_KEY, JSON.stringify(data.erbjudanden));
+        if (data.rapport)         localStorage.setItem(SALES_STORAGE_KEY, JSON.stringify(data.rapport));
+        if (data.kvitton)         localStorage.setItem(RECEIPT_STORAGE_KEY, JSON.stringify(data.kvitton));
+        if (data.onskningar)      localStorage.setItem(WISHES_STORAGE_KEY, JSON.stringify(data.onskningar));
+        if (data.taggar)          localStorage.setItem(TAGS_STORAGE_KEY, JSON.stringify(data.taggar));
+        if (data.installningar)   localStorage.setItem("zivert-holm-settings-v1", JSON.stringify(data.installningar));
+        if (data.receiptCounter)  localStorage.setItem(RECEIPT_COUNTER_KEY, String(data.receiptCounter));
+        if (data.mobileAdminPw)   localStorage.setItem(MOBILE_ADMIN_PW_KEY, data.mobileAdminPw);
+        if (data.receiptDeletePw) localStorage.setItem(RECEIPT_DELETE_PASSWORD_KEY, data.receiptDeletePw);
+        _fbSyncPaused = false;
+        _fbReady = true;
+        console.log("Firebase data loaded.");
+        return true;
+      } catch(e) {
+        _fbSyncPaused = false;
+        console.warn("Firebase ej tillgänglig, använder localStorage:", e.message);
+        return false;
+      }
+    }
+
+    /* ── Migrate localStorage → Firebase (first time) ── */
+    function migrateToFirebase() {
+      if (!window._fbDb) return;
+      console.log("Migrerar localStorage → Firebase...");
+      const updates = {};
+      // JSON keys
+      Object.entries(FB_KEY_MAP).forEach(([lsKey, fbPath]) => {
+        const raw = localStorage.getItem(lsKey);
+        if (raw) {
+          try { updates[fbPath] = JSON.parse(raw); } catch(e) { updates[fbPath] = raw; }
+        }
+      });
+      // Settings
+      const settingsRaw = localStorage.getItem("zivert-holm-settings-v1");
+      if (settingsRaw) {
+        try { updates[FB_SETTINGS_KEY] = JSON.parse(settingsRaw); } catch(e) {}
+      }
+      window._fbDb.ref("/").update(updates)
+        .then(() => console.log("Migration klar."))
+        .catch(e => console.warn("Migration failed:", e));
+    }
+
+    /* ── Realtime listener (kiosk mode) ── */
+    function startRealtimeSync() {
+      if (!window._fbDb) return;
+      window._fbDb.ref("/").on("value", (snap) => {
+        if (!snap.exists()) return;
+        const data = snap.val();
+        _fbSyncPaused = true;
+        if (data.produkter)   localStorage.setItem(CATALOG_STORAGE_KEY, JSON.stringify(data.produkter));
+        if (data.lager)       localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(data.lager));
+        if (data.erbjudanden) localStorage.setItem(OFFERS_STORAGE_KEY, JSON.stringify(data.erbjudanden));
+        if (data.rapport)     localStorage.setItem(SALES_STORAGE_KEY, JSON.stringify(data.rapport));
+        if (data.kvitton)     localStorage.setItem(RECEIPT_STORAGE_KEY, JSON.stringify(data.kvitton));
+        _fbSyncPaused = false;
+        // Re-render kiosk if not mobile
+        if (!IS_MOBILE_VIEW) {
+          try {
+            categories = loadCatalog();
+            renderOverview();
+            renderCurrentCategory();
+            renderSummary();
+          } catch(e) {}
+        }
+      });
+    }
+
     const DEFAULT_TAGS = [
       { id: "TEST",             label: "TEST",              color: "#ffd966", bg: "rgba(255,180,0,.2)",  border: "rgba(255,180,0,.3)",  emoji: "🧪" },
       { id: "EGET_BRUK",       label: "Eget bruk",         color: "#a78bfa", bg: "rgba(108,99,255,.15)", border: "rgba(108,99,255,.3)", emoji: "🏠" },
@@ -2122,6 +2273,7 @@
     }
     function saveTags(tags) {
       localStorage.setItem(TAGS_STORAGE_KEY, JSON.stringify(tags));
+      fbSyncAfterSave(TAGS_STORAGE_KEY);
     }
     function getTagDef(tagId) {
       const tags = loadTags();
@@ -2274,6 +2426,7 @@
     }
     function saveSettings(obj) {
       localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(obj));
+      fbSyncSettings();
     }
     function getEffectiveSwishNumber() {
       return loadSettings().swishNumber || SWISH_NUMBER;
@@ -2288,6 +2441,7 @@
         let current = parseInt(localStorage.getItem(RECEIPT_COUNTER_KEY) || "0");
         current = (current >= 1000) ? 1 : current + 1;
         localStorage.setItem(RECEIPT_COUNTER_KEY, String(current));
+        fbWrite("receiptCounter", current);
         return String(current).padStart(4, "0");
       } catch(e) {
         return "0001";
@@ -2311,6 +2465,7 @@
         tagType: null
       });
       localStorage.setItem(RECEIPT_STORAGE_KEY, JSON.stringify(receipts));
+      fbSyncAfterSave(RECEIPT_STORAGE_KEY);
     }
 
     /* ── Inventory ── */
@@ -2322,6 +2477,7 @@
     }
     function saveInventory(inv) {
       localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(inv));
+      fbSyncAfterSave(INVENTORY_STORAGE_KEY);
     }
 
     function getReceiptDeletePassword() {
@@ -2338,6 +2494,7 @@
     }
     function saveOffers(offers) {
       localStorage.setItem(OFFERS_STORAGE_KEY, JSON.stringify(offers));
+      fbSyncAfterSave(OFFERS_STORAGE_KEY);
     }
 
     /* ── Catalog ── */
@@ -2372,6 +2529,7 @@
     }
     function saveCatalog(cats) {
       localStorage.setItem(CATALOG_STORAGE_KEY, JSON.stringify(cats));
+      fbSyncAfterSave(CATALOG_STORAGE_KEY);
     }
 
     let categories = loadCatalog();
@@ -2673,6 +2831,7 @@
     }
     function saveSales(sales) {
       localStorage.setItem(SALES_STORAGE_KEY, JSON.stringify(sales));
+      fbSyncAfterSave(SALES_STORAGE_KEY);
     }
     function recordSale(cart) {
       if (!cart.length) return;
@@ -2945,6 +3104,7 @@
     }
     function clearReportData() {
       localStorage.removeItem(SALES_STORAGE_KEY);
+      fbWrite("rapport", null);
       renderReport(state.currentReportMode);
     }
 
@@ -3153,6 +3313,7 @@
       s.swishNumber = document.getElementById("swishNumberInput").value.trim();
       s.notes = document.getElementById("swishNotesInput").value;
       localStorage.setItem("zivert-holm-settings-v1", JSON.stringify(s));
+      fbSyncSettings();
       document.getElementById("swishSaveStatus").textContent = "Sparat!";
       setTimeout(() => document.getElementById("swishSaveStatus").textContent = "", 2000);
     });
@@ -3202,12 +3363,14 @@
           return;
         }
         localStorage.setItem(MOBILE_ADMIN_PW_KEY, newPw);
+        fbSyncPlain(MOBILE_ADMIN_PW_KEY);
       } else {
         if (current !== getReceiptDeletePassword()) {
           errorEl.textContent = "Fel nuvarande lösenord.";
           return;
         }
         localStorage.setItem(RECEIPT_DELETE_PASSWORD_KEY, newPw);
+        fbSyncPlain(RECEIPT_DELETE_PASSWORD_KEY);
       }
 
       document.getElementById("changePwModal").style.display = "none";
@@ -3377,6 +3540,7 @@
         text
       });
       localStorage.setItem(WISHES_STORAGE_KEY, JSON.stringify(wishes));
+      fbSyncAfterSave(WISHES_STORAGE_KEY);
     }
 
     let selectedWishCategory = null;
@@ -3461,6 +3625,7 @@
 
     document.getElementById("clearWishesBtn").addEventListener("click", () => {
       localStorage.removeItem(WISHES_STORAGE_KEY);
+      fbWrite("onskningar", null);
       renderWishes();
     });
 
@@ -3635,6 +3800,7 @@
             if (ids.has(r.id)) { r.tagged = true; r.tagType = tagId; }
           });
           localStorage.setItem(RECEIPT_STORAGE_KEY, JSON.stringify(receipts));
+          fbSyncAfterSave(RECEIPT_STORAGE_KEY);
           renderReceiptsAdmin();
         });
       });
@@ -3669,6 +3835,7 @@
           }
 
           localStorage.setItem(RECEIPT_STORAGE_KEY, JSON.stringify(receipts));
+          fbSyncAfterSave(RECEIPT_STORAGE_KEY);
           renderReceiptsAdmin();
         });
       });
@@ -4280,7 +4447,7 @@
           const clearBtn = document.getElementById("mavClearReport");
           if (clearBtn) clearBtn.addEventListener("click", async () => {
             const ok = await showGlobalModal({ title: "Rensa data", subtitle: "Vill du radera all försäljningsdata?", type: "confirm", confirmLabel: "Rensa" });
-            if (ok) { localStorage.removeItem(SALES_STORAGE_KEY); openMobileAdminSection("report"); }
+            if (ok) { localStorage.removeItem(SALES_STORAGE_KEY); fbWrite("rapport", null); openMobileAdminSection("report"); }
           });
           const copyBtn = document.getElementById("mavCopyReport");
           if (copyBtn) copyBtn.addEventListener("click", async () => {
@@ -4429,7 +4596,7 @@
           const clearW = document.getElementById("mavClearWishes");
           if (clearW) clearW.addEventListener("click", async () => {
             const ok = await showGlobalModal({ title: "Rensa önskningar", subtitle: "Vill du ta bort alla önskningar?", type: "confirm", confirmLabel: "Rensa" });
-            if (ok) { localStorage.removeItem(WISHES_STORAGE_KEY); openMobileAdminSection("wishes"); }
+            if (ok) { localStorage.removeItem(WISHES_STORAGE_KEY); fbWrite("onskningar", null); openMobileAdminSection("wishes"); }
           });
           break;
         }
@@ -4446,6 +4613,7 @@
               if (pw !== getReceiptDeletePassword()) return;
               r.tagType = r.tagType === tagId ? null : tagId;
               localStorage.setItem(RECEIPT_STORAGE_KEY, JSON.stringify(receipts));
+              fbSyncAfterSave(RECEIPT_STORAGE_KEY);
               openMobileAdminSection("receipts");
             });
           });
@@ -4459,6 +4627,7 @@
             s.swishNumber = document.getElementById("mavSwishNum").value.trim();
             s.notes = document.getElementById("mavSwishNotes").value;
             localStorage.setItem("zivert-holm-settings-v1", JSON.stringify(s));
+            fbSyncSettings();
             document.getElementById("mavSwishStatus").textContent = "Sparat!";
             setTimeout(() => { document.getElementById("mavSwishStatus").textContent = ""; }, 2000);
           });
@@ -4629,18 +4798,36 @@
     });
 
     /* ── Bootstrap ── */
-    cleanupQtyState();
-    renderOverview();
-    renderSummary();
-    openOverview();
-    if (IS_MOBILE_VIEW) {
-      document.getElementById("mobileApp").style.display = "block";
-      document.querySelector(".viewport").style.display = "none";
-      initMobileView();
-      history.pushState(null, "", window.location.href);
-    } else {
-      fitStage();
+    async function bootstrap() {
+      // 1. Ladda från Firebase (3s timeout, fallback till localStorage)
+      const fbLoaded = await loadFromFirebase();
+      if (!fbLoaded && window._fbDb) {
+        // Firebase tom → migrera befintlig localStorage-data
+        migrateToFirebase();
+      }
+      _fbReady = true;
+
+      // 2. Ladda kategori-data (kan ha uppdaterats från Firebase)
+      categories = loadCatalog();
+
+      // 3. Rendera
+      cleanupQtyState();
+      renderOverview();
+      renderSummary();
+      openOverview();
+
+      if (IS_MOBILE_VIEW) {
+        document.getElementById("mobileApp").style.display = "block";
+        document.querySelector(".viewport").style.display = "none";
+        initMobileView();
+        history.pushState(null, "", window.location.href);
+      } else {
+        fitStage();
+        // 4. Starta realtidslyssning på kiosken
+        startRealtimeSync();
+      }
     }
+    bootstrap();
   })();
   </script>
 </body>
