@@ -1400,15 +1400,8 @@
                           <div class="stat-label">Summerat värde</div>
                           <div class="stat-value" id="reportTotalValue">0 kr</div>
                         </div>
-                        <div class="stat-card">
-                          <div class="stat-label">Taggade TEST</div>
-                          <div class="stat-value" id="reportTestStat" style="color:#ffd966;font-size:18px;">0</div>
-                        </div>
-                        <div class="stat-card">
-                          <div class="stat-label">Utlägg</div>
-                          <div class="stat-value" id="reportUtlaggStat" style="color:#86efac;font-size:18px;">0</div>
-                        </div>
                       </div>
+                      <div class="stat-grid" id="reportTagStats" style="margin-top:8px;"></div>
                       <p class="report-meta-text" id="reportMetaText">Välj ett tidsintervall ovan.</p>
                       <div class="report-output" id="reportOutput"></div>
                       <span id="reportPanelTitle" style="display:none"></span>
@@ -1561,6 +1554,14 @@
                     <div class="admin-section" id="adminSectionReceipts">
                       <h3 class="admin-section-title">Kvitton</h3>
                       <div class="report-meta-text" id="receiptsMetaText"></div>
+
+                      <!-- Tag manager -->
+                      <div style="margin-bottom:16px;padding:14px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:12px;">
+                        <div style="font-size:14px;color:rgba(255,255,255,.5);margin-bottom:8px;">Tillgängliga taggar:</div>
+                        <div id="tagManagerList" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;"></div>
+                        <button class="catalog-small-btn" id="addCustomTagBtn" type="button" style="font-size:13px;padding:6px 14px;">+ Lägg till tagg</button>
+                      </div>
+
                       <div id="receiptsList"></div>
                     </div>
 
@@ -1812,6 +1813,31 @@
     const INVENTORY_STORAGE_KEY = "zivert-holm-inventory-v1";
     const RECEIPT_DELETE_PASSWORD_KEY = "zivert-holm-receipt-delete-pw-v1";
     const DEFAULT_RECEIPT_DELETE_PASSWORD = "072940";
+    const TAGS_STORAGE_KEY = "zivert-holm-tags-v1";
+
+    const DEFAULT_TAGS = [
+      { id: "TEST",             label: "TEST",              color: "#ffd966", bg: "rgba(255,180,0,.2)",  border: "rgba(255,180,0,.3)",  emoji: "🧪" },
+      { id: "EGET_BRUK",       label: "Eget bruk",         color: "#a78bfa", bg: "rgba(108,99,255,.15)", border: "rgba(108,99,255,.3)", emoji: "🏠" },
+      { id: "UTLAGG_FORBRUKAT", label: "Utlägg förbrukat", color: "#86efac", bg: "rgba(100,200,100,.15)", border: "rgba(100,200,100,.3)", emoji: "💰" }
+    ];
+
+    function loadTags() {
+      try {
+        const raw = localStorage.getItem(TAGS_STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed) && parsed.length) return parsed;
+        }
+      } catch(e) {}
+      return DEFAULT_TAGS.slice();
+    }
+    function saveTags(tags) {
+      localStorage.setItem(TAGS_STORAGE_KEY, JSON.stringify(tags));
+    }
+    function getTagDef(tagId) {
+      const tags = loadTags();
+      return tags.find(t => t.id === tagId) || null;
+    }
 
     /* ── Product images ── */
     const PRODUCT_IMAGES = {
@@ -2517,16 +2543,25 @@
         return true;
       });
 
-      const test = filtered.filter(r => r.tagType === 'TEST' || (r.tagged === "test" || r.tagged === true));
-      const utlagg = filtered.filter(r => r.tagType === 'UTLAGG' || r.tagged === "eget_bruk");
-      return {
-        testCount: test.length,
-        testTotal: test.reduce((s, r) => s + Number(r.total), 0),
-        testItems: test.flatMap(r => r.items || []),
-        utlaggCount: utlagg.length,
-        utlaggTotal: utlagg.reduce((s, r) => s + Number(r.total), 0),
-        utlaggItems: utlagg.flatMap(r => r.items || [])
-      };
+      // Build dynamic tag summary
+      const tags = loadTags();
+      const tagSummary = {};
+      tags.forEach(tag => {
+        const matches = filtered.filter(r => {
+          if (r.tagType === tag.id) return true;
+          // Legacy compat
+          if (tag.id === 'TEST' && (r.tagged === "test" || r.tagged === true)) return true;
+          if (tag.id === 'EGET_BRUK' && r.tagged === "eget_bruk") return true;
+          return false;
+        });
+        tagSummary[tag.id] = {
+          def: tag,
+          count: matches.length,
+          total: matches.reduce((s, r) => s + Number(r.total), 0),
+          items: matches.flatMap(r => r.items || [])
+        };
+      });
+      return tagSummary;
     }
 
     function renderReport(mode) {
@@ -2542,11 +2577,16 @@
       reportTotalValue.textContent = formatKr(agg.totalValue);
       reportMetaText.textContent = buildMetaText(mode, agg.totalTransactions);
 
-      // Tag stats
-      const reportTestEl = document.getElementById("reportTestStat");
-      const reportUtlaggEl = document.getElementById("reportUtlaggStat");
-      if (reportTestEl) reportTestEl.textContent = tags.testCount > 0 ? `${tags.testCount} st / −${tags.testTotal} kr` : "0";
-      if (reportUtlaggEl) reportUtlaggEl.textContent = tags.utlaggCount > 0 ? `${tags.utlaggCount} st / ${tags.utlaggTotal} kr` : "0";
+      // Dynamic tag stat cards
+      const reportTagStatsEl = document.getElementById("reportTagStats");
+      if (reportTagStatsEl) {
+        reportTagStatsEl.innerHTML = Object.values(tags).filter(t => t.count > 0).map(t => `
+          <div class="stat-card">
+            <div class="stat-label">${escapeHtml(t.def.emoji)} ${escapeHtml(t.def.label)}</div>
+            <div class="stat-value" style="color:${t.def.color};font-size:18px;">${t.count} st / −${t.total} kr</div>
+          </div>
+        `).join("");
+      }
 
       let html = "";
       if (!agg.categories.length) {
@@ -2565,46 +2605,28 @@
         `).join("");
       }
 
-      // Tag deduction boxes
-      if (tags.testCount > 0) {
-        const grouped = {};
-        tags.testItems.forEach(i => {
-          const k = i.name;
-          if (!grouped[k]) grouped[k] = 0;
-          grouped[k] += Number(i.qty || 0);
-        });
-        html += `
-          <div class="report-group" style="border:1px solid rgba(255,180,0,.3);background:rgba(255,180,0,.04);margin-top:12px;">
-            <h4 style="color:#ffd966;">🧪 TEST-kvitton (−${tags.testTotal} kr)</h4>
-            <div style="font-size:14px;color:rgba(255,255,255,.45);margin-bottom:8px;">${tags.testCount} kvitton taggade som test — dessa bör ej räknas i försäljningen.</div>
-            ${Object.entries(grouped).map(([name, qty]) => `
-              <div class="report-row">
-                <span>${escapeHtml(name)}</span>
-                <strong>−${escapeHtml(qty)} st</strong>
-              </div>
-            `).join("")}
-          </div>`;
-      }
-
-      if (tags.utlaggCount > 0) {
-        const grouped = {};
-        tags.utlaggItems.forEach(i => {
-          const k = i.name;
-          if (!grouped[k]) grouped[k] = 0;
-          grouped[k] += Number(i.qty || 0);
-        });
-        html += `
-          <div class="report-group" style="border:1px solid rgba(100,200,100,.3);background:rgba(100,200,100,.04);margin-top:12px;">
-            <h4 style="color:#86efac;">💰 Utlägg (${tags.utlaggTotal} kr)</h4>
-            <div style="font-size:14px;color:rgba(255,255,255,.45);margin-bottom:8px;">${tags.utlaggCount} kvitton taggade som utlägg.</div>
-            ${Object.entries(grouped).map(([name, qty]) => `
-              <div class="report-row">
-                <span>${escapeHtml(name)}</span>
-                <strong>${escapeHtml(qty)} st</strong>
-              </div>
-            `).join("")}
-          </div>`;
-      }
+      // Dynamic tag deduction boxes
+      Object.values(tags).forEach(t => {
+        if (t.count > 0) {
+          const grouped = {};
+          t.items.forEach(i => {
+            const k = i.name;
+            if (!grouped[k]) grouped[k] = 0;
+            grouped[k] += Number(i.qty || 0);
+          });
+          html += `
+            <div class="report-group" style="border:1px solid ${t.def.border};background:${t.def.bg.replace(/[\d.]+\)$/, '0.04)')};margin-top:12px;">
+              <h4 style="color:${t.def.color};">${t.def.emoji} ${escapeHtml(t.def.label)} (−${t.total} kr)</h4>
+              <div style="font-size:14px;color:rgba(255,255,255,.45);margin-bottom:8px;">${t.count} kvitton taggade som ${escapeHtml(t.def.label)}.</div>
+              ${Object.entries(grouped).map(([name, qty]) => `
+                <div class="report-row">
+                  <span>${escapeHtml(name)}</span>
+                  <strong>−${escapeHtml(qty)} st</strong>
+                </div>
+              `).join("")}
+            </div>`;
+        }
+      });
 
       reportOutput.innerHTML = html;
       state.lastRenderedReportText = buildReportText(title, agg);
@@ -3119,36 +3141,74 @@
     });
 
     /* ── Receipts admin ── */
-    function getTagLabel(tagged) {
-      if (tagged === "test" || tagged === true) return "TEST";
-      if (tagged === "eget_bruk") return "EGET BRUK";
-      return "";
+    function isTagged(r) { return !!r.tagType; }
+
+    const TAG_COLORS = [
+      { color: "#fbbf24", bg: "rgba(251,191,36,.15)", border: "rgba(251,191,36,.3)" },
+      { color: "#60a5fa", bg: "rgba(96,165,250,.15)", border: "rgba(96,165,250,.3)" },
+      { color: "#f472b6", bg: "rgba(244,114,182,.15)", border: "rgba(244,114,182,.3)" },
+      { color: "#34d399", bg: "rgba(52,211,153,.15)", border: "rgba(52,211,153,.3)" },
+      { color: "#c084fc", bg: "rgba(192,132,252,.15)", border: "rgba(192,132,252,.3)" },
+      { color: "#fb923c", bg: "rgba(251,146,60,.15)", border: "rgba(251,146,60,.3)" }
+    ];
+
+    function renderTagManager() {
+      const tags = loadTags();
+      const container = document.getElementById("tagManagerList");
+      if (!container) return;
+      container.innerHTML = tags.map(t => `
+        <div style="display:inline-flex;align-items:center;gap:6px;background:${t.bg};border:1px solid ${t.border};color:${t.color};padding:4px 12px;border-radius:8px;font-size:13px;">
+          <span>${t.emoji} ${escapeHtml(t.label)}</span>
+          ${DEFAULT_TAGS.some(d => d.id === t.id) ? '' : `<button class="remove-tag-btn" data-tag-id="${escapeHtml(t.id)}" style="background:none;border:none;color:${t.color};cursor:pointer;font-size:16px;padding:0 2px;line-height:1;">✕</button>`}
+        </div>
+      `).join("");
+
+      container.querySelectorAll(".remove-tag-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const tags = loadTags();
+          const filtered = tags.filter(t => t.id !== btn.dataset.tagId);
+          saveTags(filtered);
+          renderTagManager();
+          renderReceiptsAdmin();
+        });
+      });
     }
-    function getTagStyle(tagged) {
-      if (tagged === "test" || tagged === true) return "opacity:.55;border:1px solid rgba(255,180,0,.3);";
-      if (tagged === "eget_bruk") return "opacity:.55;border:1px solid rgba(108,99,255,.4);";
-      return "";
-    }
-    function getTagBadge(tagged) {
-      if (tagged === "test" || tagged === true) return '<span style="font-size:12px;background:rgba(255,180,0,.2);color:#ffd966;padding:3px 10px;border-radius:6px;letter-spacing:1px;">TEST</span>';
-      if (tagged === "eget_bruk") return '<span style="font-size:12px;background:rgba(108,99,255,.2);color:#a78bfa;padding:3px 10px;border-radius:6px;letter-spacing:1px;">EGET BRUK</span>';
-      return "";
-    }
-    function isTagged(r) { return r.tagged === true || r.tagged === "test" || r.tagged === "eget_bruk"; }
+
+    document.getElementById("addCustomTagBtn").addEventListener("click", async () => {
+      const name = await showGlobalModal({
+        title: "Ny tagg",
+        subtitle: "Ange namn för den nya taggen (t.ex. 'Svinn', 'Gratis').",
+        type: "text",
+        confirmLabel: "Skapa"
+      });
+      if (!name || !name.trim()) return;
+      const label = name.trim();
+      const id = label.toUpperCase().replace(/[^A-ZÅÄÖ0-9]/gi, "_");
+      const tags = loadTags();
+      if (tags.some(t => t.id === id)) return;
+      const colorIdx = tags.length % TAG_COLORS.length;
+      const c = TAG_COLORS[colorIdx];
+      tags.push({ id, label, color: c.color, bg: c.bg, border: c.border, emoji: "🏷" });
+      saveTags(tags);
+      renderTagManager();
+      renderReceiptsAdmin();
+    });
 
     function renderReceiptsAdmin() {
       const receipts = loadReceipts().slice().reverse();
       const meta = document.getElementById("receiptsMetaText");
       const list = document.getElementById("receiptsList");
+      const allTags = loadTags();
 
-      const testReceipts = receipts.filter(r => r.tagType === 'TEST');
-      const utlaggReceipts = receipts.filter(r => r.tagType === 'UTLAGG');
-      const testTotal = testReceipts.reduce((s, r) => s + Number(r.total), 0);
-      const utlaggTotal = utlaggReceipts.reduce((s, r) => s + Number(r.total), 0);
+      // Tag manager
+      renderTagManager();
 
+      // Meta text
       let metaText = `Totalt ${receipts.length} kvitton.`;
-      if (testTotal > 0) metaText += ` TEST: ${testReceipts.length} st (−${testTotal} kr).`;
-      if (utlaggTotal > 0) metaText += ` UTLÄGG: ${utlaggReceipts.length} st (${utlaggTotal} kr).`;
+      allTags.forEach(tag => {
+        const tagged = receipts.filter(r => r.tagType === tag.id);
+        if (tagged.length) metaText += ` ${tag.label}: ${tagged.length} st (−${tagged.reduce((s,r) => s + Number(r.total), 0)} kr).`;
+      });
       meta.textContent = metaText;
 
       if (!receipts.length) {
@@ -3157,38 +3217,37 @@
       }
 
       list.innerHTML = `
-        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
           <button class="catalog-small-btn" id="selectAllReceiptsBtn" type="button">Markera alla</button>
           <button class="catalog-small-btn" id="deselectAllReceiptsBtn" type="button">Avmarkera alla</button>
-          <button class="catalog-small-btn" id="tagSelectedTestBtn" type="button" style="background:rgba(255,180,0,.3);color:#ffd966;border:none;display:none;">Tagga alla TEST</button>
-          <button class="catalog-small-btn" id="tagSelectedUtlaggBtn" type="button" style="background:rgba(100,200,100,.2);color:#86efac;border:none;display:none;">Tagga alla UTLÄGG</button>
+          ${allTags.map(tag => `
+            <button class="catalog-small-btn bulk-tag-btn" data-bulk-tag="${escapeHtml(tag.id)}" type="button"
+              style="background:${tag.bg};color:${tag.color};border:1px solid ${tag.border};display:none;font-size:12px;padding:4px 10px;">
+              Tagga alla ${escapeHtml(tag.label)}
+            </button>
+          `).join("")}
         </div>
         ${receipts.map(r => {
-          const tagStyle = r.tagType === 'TEST' ? 'opacity:.55;border:1px solid rgba(255,180,0,.3);'
-            : r.tagType === 'UTLAGG' ? 'opacity:.55;border:1px solid rgba(100,200,100,.3);' : '';
+          const tagDef = r.tagType ? getTagDef(r.tagType) : null;
+          const borderStyle = tagDef ? `opacity:.55;border:1px solid ${tagDef.border};` : '';
           return `
-          <div class="report-group" style="margin-bottom:10px;${tagStyle}">
+          <div class="report-group" style="margin-bottom:10px;${borderStyle}">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:8px;">
               <div style="display:flex;align-items:center;gap:10px;">
                 <input type="checkbox" class="receipt-checkbox" data-receipt-id="${escapeHtml(r.id)}" style="width:20px;height:20px;cursor:pointer;" />
                 <span style="font-size:24px;font-weight:700;color:#ffd966;">#${escapeHtml(r.id)}</span>
-                ${r.tagType === 'TEST' ? '<span style="font-size:12px;background:rgba(255,180,0,.2);color:#ffd966;padding:3px 10px;border-radius:6px;letter-spacing:1px;">TEST</span>' : ''}
-                ${r.tagType === 'UTLAGG' ? '<span style="font-size:12px;background:rgba(100,200,100,.15);color:#86efac;padding:3px 10px;border-radius:6px;letter-spacing:1px;">UTLÄGG</span>' : ''}
+                ${tagDef ? `<span style="font-size:12px;background:${tagDef.bg};color:${tagDef.color};padding:3px 10px;border-radius:6px;letter-spacing:1px;">${escapeHtml(tagDef.label)}</span>` : ''}
               </div>
               <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
                 <span style="font-size:14px;color:rgba(255,255,255,.45);">${new Date(r.time).toLocaleString("sv-SE")}</span>
-                <button class="catalog-small-btn" type="button"
-                  data-receipt-tag="${escapeHtml(r.id)}"
-                  data-tag-type="TEST"
-                  style="font-size:12px;padding:3px 10px;${r.tagType === 'TEST' ? 'background:rgba(255,180,0,.3);color:#ffd966;' : ''}">
-                  ${r.tagType === 'TEST' ? '✓ TEST' : 'Tagga TEST'}
-                </button>
-                <button class="catalog-small-btn" type="button"
-                  data-receipt-tag="${escapeHtml(r.id)}"
-                  data-tag-type="UTLAGG"
-                  style="font-size:12px;padding:3px 10px;${r.tagType === 'UTLAGG' ? 'background:rgba(100,200,100,.2);color:#86efac;' : ''}">
-                  ${r.tagType === 'UTLAGG' ? '✓ UTLÄGG' : 'Tagga UTLÄGG'}
-                </button>
+                ${allTags.map(tag => `
+                  <button class="catalog-small-btn" type="button"
+                    data-receipt-tag="${escapeHtml(r.id)}"
+                    data-tag-type="${escapeHtml(tag.id)}"
+                    style="font-size:11px;padding:2px 8px;${r.tagType === tag.id ? `background:${tag.bg};color:${tag.color};border:1px solid ${tag.border};` : ''}">
+                    ${r.tagType === tag.id ? '✓ ' : ''}${escapeHtml(tag.label)}
+                  </button>
+                `).join("")}
               </div>
             </div>
             ${r.items.map(i => `
@@ -3205,77 +3264,55 @@
       `;
 
       // Checkbox logik
-      function updateTagSelectedBtns() {
+      function updateBulkBtns() {
         const checked = document.querySelectorAll(".receipt-checkbox:checked");
         const show = checked.length > 0;
-        const testBtn = document.getElementById("tagSelectedTestBtn");
-        const utlaggBtn = document.getElementById("tagSelectedUtlaggBtn");
-        if (testBtn) testBtn.style.display = show ? "block" : "none";
-        if (utlaggBtn) utlaggBtn.style.display = show ? "block" : "none";
+        document.querySelectorAll(".bulk-tag-btn").forEach(btn => {
+          btn.style.display = show ? "block" : "none";
+        });
       }
 
       list.querySelectorAll(".receipt-checkbox").forEach(cb => {
-        cb.addEventListener("change", updateTagSelectedBtns);
+        cb.addEventListener("change", updateBulkBtns);
       });
 
       document.getElementById("selectAllReceiptsBtn").addEventListener("click", () => {
         document.querySelectorAll(".receipt-checkbox").forEach(cb => cb.checked = true);
-        updateTagSelectedBtns();
+        updateBulkBtns();
       });
 
       document.getElementById("deselectAllReceiptsBtn").addEventListener("click", () => {
         document.querySelectorAll(".receipt-checkbox").forEach(cb => cb.checked = false);
-        updateTagSelectedBtns();
+        updateBulkBtns();
       });
 
-      // Bulk tag TEST
-      document.getElementById("tagSelectedTestBtn").addEventListener("click", async () => {
-        const checked = Array.from(document.querySelectorAll(".receipt-checkbox:checked"));
-        if (!checked.length) return;
-        const pw = await showGlobalModal({
-          title: "Kvitto-lösenord",
-          subtitle: `Tagga ${checked.length} kvitto(n) som TEST.`,
-          type: "password",
-          confirmLabel: "Bekräfta"
+      // Bulk tag buttons (dynamic)
+      document.querySelectorAll(".bulk-tag-btn").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          const tagId = btn.dataset.bulkTag;
+          const tagDef = getTagDef(tagId);
+          const checked = Array.from(document.querySelectorAll(".receipt-checkbox:checked"));
+          if (!checked.length) return;
+          const pw = await showGlobalModal({
+            title: "Kvitto-lösenord",
+            subtitle: `Tagga ${checked.length} kvitto(n) som ${tagDef ? tagDef.label : tagId}.`,
+            type: "password",
+            confirmLabel: "Bekräfta"
+          });
+          if (pw === null) return;
+          if (pw !== getReceiptDeletePassword()) {
+            document.getElementById("globalModalError").textContent = "Fel lösenord.";
+            return;
+          }
+          closeGlobalModal();
+          const receipts = loadReceipts();
+          const ids = new Set(checked.map(cb => cb.dataset.receiptId));
+          receipts.forEach(r => {
+            if (ids.has(r.id)) { r.tagged = true; r.tagType = tagId; }
+          });
+          localStorage.setItem(RECEIPT_STORAGE_KEY, JSON.stringify(receipts));
+          renderReceiptsAdmin();
         });
-        if (pw === null) return;
-        if (pw !== getReceiptDeletePassword()) {
-          document.getElementById("globalModalError").textContent = "Fel lösenord.";
-          return;
-        }
-        closeGlobalModal();
-        const receipts = loadReceipts();
-        const ids = new Set(checked.map(cb => cb.dataset.receiptId));
-        receipts.forEach(r => {
-          if (ids.has(r.id)) { r.tagged = true; r.tagType = 'TEST'; }
-        });
-        localStorage.setItem(RECEIPT_STORAGE_KEY, JSON.stringify(receipts));
-        renderReceiptsAdmin();
-      });
-
-      // Bulk tag UTLÄGG
-      document.getElementById("tagSelectedUtlaggBtn").addEventListener("click", async () => {
-        const checked = Array.from(document.querySelectorAll(".receipt-checkbox:checked"));
-        if (!checked.length) return;
-        const pw = await showGlobalModal({
-          title: "Kvitto-lösenord",
-          subtitle: `Tagga ${checked.length} kvitto(n) som UTLÄGG.`,
-          type: "password",
-          confirmLabel: "Bekräfta"
-        });
-        if (pw === null) return;
-        if (pw !== getReceiptDeletePassword()) {
-          document.getElementById("globalModalError").textContent = "Fel lösenord.";
-          return;
-        }
-        closeGlobalModal();
-        const receipts = loadReceipts();
-        const ids = new Set(checked.map(cb => cb.dataset.receiptId));
-        receipts.forEach(r => {
-          if (ids.has(r.id)) { r.tagged = true; r.tagType = 'UTLAGG'; }
-        });
-        localStorage.setItem(RECEIPT_STORAGE_KEY, JSON.stringify(receipts));
-        renderReceiptsAdmin();
       });
 
       // Enskild tagg-knapp
@@ -3303,7 +3340,7 @@
             r.tagged = false;
             r.tagType = null;
           } else {
-            r.tagged = tagType === 'TEST';
+            r.tagged = true;
             r.tagType = tagType;
           }
 
@@ -3509,7 +3546,9 @@
         const pwInput = document.getElementById("globalModalInput");
         const numInput = document.getElementById("globalModalNumberInput");
 
-        if (type === "password") {
+        if (type === "password" || type === "text") {
+          pwInput.type = type;
+          pwInput.placeholder = type === "password" ? "Ange lösenord" : "Skriv här...";
           pwInput.style.display = "block";
           pwInput.value = "";
           numInput.style.display = "none";
