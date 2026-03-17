@@ -2190,7 +2190,14 @@
         if (data.lager)           localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(data.lager));
         if (data.erbjudanden)     localStorage.setItem(OFFERS_STORAGE_KEY, JSON.stringify(data.erbjudanden));
         if (data.rapport)         localStorage.setItem(SALES_STORAGE_KEY, JSON.stringify(data.rapport));
-        if (data.kvitton)         localStorage.setItem(RECEIPT_STORAGE_KEY, JSON.stringify(data.kvitton));
+        if (data.kvitton) {
+          // Firebase kvitton kan vara objekt (nytt format) eller array (gammalt)
+          const kvittonData = data.kvitton;
+          if (Array.isArray(kvittonData)) {
+            localStorage.setItem(RECEIPT_STORAGE_KEY, JSON.stringify(kvittonData));
+          }
+          // Om objekt-format (nytt) — localStorage-arrayen är master, synkas inte tillbaka
+        }
         if (data.onskningar)      localStorage.setItem(WISHES_STORAGE_KEY, JSON.stringify(data.onskningar));
         if (data.taggar)          localStorage.setItem(TAGS_STORAGE_KEY, JSON.stringify(data.taggar));
         if (data.installningar)   localStorage.setItem("zivert-holm-settings-v1", JSON.stringify(data.installningar));
@@ -2488,17 +2495,40 @@
       } catch(e) { return []; }
     }
     function saveReceipt(receiptId, cart, total) {
-      const receipts = loadReceipts();
-      receipts.push({
+      const now = new Date();
+      const receipt = {
         id: receiptId,
-        time: new Date().toISOString(),
+        time: now.toISOString(),
         items: cart.map(i => ({ name: i.name, qty: i.qty, sum: i.sum })),
         total,
         tagged: false,
         tagType: null
-      });
+      };
+      // Spara i localStorage (befintligt format, hela arrayen)
+      const receipts = loadReceipts();
+      receipts.push(receipt);
       localStorage.setItem(RECEIPT_STORAGE_KEY, JSON.stringify(receipts));
-      fbSyncAfterSave(RECEIPT_STORAGE_KEY);
+
+      // Skriv till Firebase i läsbart format per kvitto
+      if (window._fbDb && !_fbSyncPaused) {
+        const year = now.getFullYear();
+        const kvittoNummer = `ZH-${year}-${receiptId}`;
+        const fbReceipt = {
+          kvittoNummer,
+          datum: now.toLocaleDateString("sv-SE"),          // "2026-03-17"
+          tid: now.toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" }), // "14:32"
+          betalning: "Swish",
+          produkter: cart.map(i => ({
+            namn: i.name,
+            antal: i.qty,
+            prisStyck: i.price,
+            prisTotal: i.sum
+          })),
+          totalSumma: total
+        };
+        // Skriv som /kvitton/<kvittoNummer> — inte som array
+        fbWrite("kvitton/" + kvittoNummer, fbReceipt);
+      }
     }
 
     /* ── Inventory ── */
