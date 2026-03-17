@@ -2268,7 +2268,7 @@
   </div>
 
   <!-- Global modal (utanför viewport för mobilåtkomst) -->
-  <div class="global-modal-overlay" id="globalModalOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:9998;align-items:center;justify-content:center;">
+  <div class="global-modal-overlay" id="globalModalOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:9998;align-items:center;justify-content:center;" onclick="if(event.target===this){closeGlobalModal(null);}">
     <div style="background:#ffffff;border:1px solid rgba(0,0,0,.08);border-radius:22px;padding:28px;width:min(460px, 90vw);display:flex;flex-direction:column;gap:16px;box-shadow:0 24px 56px rgba(0,0,0,.15);">
       <div style="font-size:28px;font-style:italic;color:#2c3e35;" id="globalModalTitle">Bekräfta</div>
       <div style="font-size:16px;color:#6b7c74;" id="globalModalSubtitle"></div>
@@ -3795,7 +3795,16 @@
 
     /* ── Catalog editor ── */
     function renderCatalogEditor() {
-      catalogEditor.innerHTML = categories.map(cat => {
+      const missingDefaults = DEFAULT_CATEGORIES.filter(dc => !categories.some(c => c.key === dc.key));
+      const restoreBtn = missingDefaults.length
+        ? `<div style="margin-bottom:16px;">
+            <button class="admin-btn secondary" id="restoreDefaultCatsBtn" type="button">
+              ↩ Återskapa borttagna kategorier (${missingDefaults.map(m => m.title).join(", ")})
+            </button>
+           </div>`
+        : "";
+
+      catalogEditor.innerHTML = restoreBtn + categories.map(cat => {
         const itemsHtml = cat.items.map(item => `
           <div class="catalog-item-row">
             <input
@@ -3831,7 +3840,16 @@
         return `
           <div class="catalog-group">
             <div class="catalog-group-head">
-              <h4>${escapeHtml(cat.title)}</h4>
+              <input
+                class="catalog-input"
+                type="text"
+                style="font-size:18px;font-weight:700;background:rgba(0,0,0,.04);border-radius:6px;padding:6px 10px;flex:1;"
+                data-catalog-field="category-title"
+                data-category="${escapeHtml(cat.key)}"
+                value="${escapeHtml(cat.title)}"
+                aria-label="Kategorinamn"
+                placeholder="Kategorinamn"
+              />
               <div class="catalog-group-actions">
                 <button class="admin-btn secondary" style="font-size:16px;padding:8px 14px" type="button"
                   data-catalog-action="add-item" data-category="${escapeHtml(cat.key)}">Lägg till produkt</button>
@@ -3843,25 +3861,52 @@
           </div>
         `;
       }).join("");
+
+      // Bind restore button if shown
+      const rb = document.getElementById("restoreDefaultCatsBtn");
+      if (rb) rb.addEventListener("click", restoreDefaultCategories);
     }
     function readCatalogFromEditor() {
-      return categories.map(cat => ({
-        key: cat.key, title: cat.title, subtitle: cat.subtitle,
-        items: cat.items.map(item => {
-          const nameEl  = catalogEditor.querySelector(`[data-catalog-field="name"][data-category="${CSS.escape(cat.key)}"][data-item-id="${CSS.escape(item.id)}"]`);
-          const priceEl = catalogEditor.querySelector(`[data-catalog-field="price"][data-category="${CSS.escape(cat.key)}"][data-item-id="${CSS.escape(item.id)}"]`);
-          const nextName  = nameEl  ? String(nameEl.value).trim()  : item.name;
-          const nextPrice = priceEl ? Number(priceEl.value)         : item.price;
-          return {
-            id: item.id,
-            name: nextName || item.name,
-            price: Number.isFinite(nextPrice) && nextPrice >= 0 ? Math.round(nextPrice) : item.price
-          };
-        })
-      }));
+      return categories.map(cat => {
+        const titleEl = catalogEditor.querySelector(`[data-catalog-field="category-title"][data-category="${CSS.escape(cat.key)}"]`);
+        const nextTitle = titleEl ? String(titleEl.value).trim() : cat.title;
+        return {
+          key: cat.key,
+          title: nextTitle || cat.title,
+          subtitle: cat.subtitle,
+          items: cat.items.map(item => {
+            const nameEl  = catalogEditor.querySelector(`[data-catalog-field="name"][data-category="${CSS.escape(cat.key)}"][data-item-id="${CSS.escape(item.id)}"]`);
+            const priceEl = catalogEditor.querySelector(`[data-catalog-field="price"][data-category="${CSS.escape(cat.key)}"][data-item-id="${CSS.escape(item.id)}"]`);
+            const nextName  = nameEl  ? String(nameEl.value).trim()  : item.name;
+            const nextPrice = priceEl ? Number(priceEl.value)         : item.price;
+            return {
+              id: item.id,
+              name: nextName || item.name,
+              price: Number.isFinite(nextPrice) && nextPrice >= 0 ? Math.round(nextPrice) : item.price
+            };
+          })
+        };
+      });
     }
+    let _catalogUnsaved = false;
+
     function setCatalogStatus(msg) { catalogSaveStatus.textContent = msg; }
+
+    /* Uppdaterar UI utan att spara — används av add/remove-operationer */
+    function refreshCatalogDisplay(msg = "") {
+      _catalogUnsaved = true;
+      cleanupQtyState();
+      renderOverview();
+      renderCurrentCategory();
+      renderSummary();
+      renderCatalogEditor();
+      renderReport(state.currentReportMode);
+      setCatalogStatus(msg ? `⚠ Ospararat: ${msg}` : "⚠ Du har osparade ändringar — klicka Spara ändringar.");
+    }
+
+    /* Sparar till localStorage — anropas bara av explicit Spara-knapp */
     function syncCatalogAndRefresh(msg = "Produktändringar sparade.") {
+      _catalogUnsaved = false;
       cleanupQtyState();
       saveCatalog(categories);
       renderOverview();
@@ -3871,9 +3916,37 @@
       renderReport(state.currentReportMode);
       setCatalogStatus(msg);
     }
+
     function saveCatalogChanges() {
+      const prevCats = loadCatalog(); // vad som finns i localStorage nu
       categories = readCatalogFromEditor();
+
+      // Rensa inventory för borttagna produkter
+      const prevItems = new Map();
+      prevCats.forEach(c => c.items.forEach(it => prevItems.set(it.id, it.name)));
+      const currIds = new Set();
+      categories.forEach(c => c.items.forEach(it => currIds.add(it.id)));
+      const removedNames = [];
+      prevItems.forEach((name, id) => { if (!currIds.has(id)) removedNames.push(name); });
+      if (removedNames.length) {
+        const inv = loadInventory();
+        removedNames.forEach(name => { delete inv[name]; });
+        saveInventory(inv);
+      }
+
       syncCatalogAndRefresh("Produktändringar sparade.");
+    }
+
+    /* Återskapa saknade standardkategorier */
+    function restoreDefaultCategories() {
+      categories = readCatalogFromEditor();
+      const missing = DEFAULT_CATEGORIES.filter(dc => !categories.some(c => c.key === dc.key));
+      if (!missing.length) {
+        setCatalogStatus("Alla standardkategorier finns redan.");
+        return;
+      }
+      missing.forEach(mc => categories.push(JSON.parse(JSON.stringify(mc))));
+      refreshCatalogDisplay(`${missing.map(m => m.title).join(", ")} återskapad.`);
     }
     function addCategory() {
       categories = readCatalogFromEditor();
@@ -3882,30 +3955,21 @@
       let key = slugify(title), counter = 2;
       while (categories.some(c => c.key === key)) key = `${slugify(title)}-${counter++}`;
       categories.push({ key, title, subtitle: "Ny kategori", items: [{ id: generateId(key), name: "Ny produkt", price: 0 }] });
-      syncCatalogAndRefresh("Ny kategori skapad.");
+      refreshCatalogDisplay("Ny kategori tillagd.");
     }
     function addItemToCategory(catKey) {
       categories = readCatalogFromEditor();
       const cat = categories.find(c => c.key === catKey);
       if (!cat) return;
       cat.items.push({ id: generateId(catKey), name: "Ny produkt", price: 0 });
-      syncCatalogAndRefresh("Ny produkt tillagd.");
+      refreshCatalogDisplay("Ny produkt tillagd.");
     }
     function removeItemFromCategory(catKey, itemId) {
       categories = readCatalogFromEditor();
       const cat = categories.find(c => c.key === catKey);
       if (!cat) return;
-      const item = cat.items.find(it => it.id === itemId);
       cat.items = cat.items.filter(it => it.id !== itemId);
-      // Remove from inventory
-      if (item) {
-        const inv = loadInventory();
-        if (inv[item.name] !== undefined) {
-          delete inv[item.name];
-          saveInventory(inv);
-        }
-      }
-      syncCatalogAndRefresh("Produkt borttagen.");
+      refreshCatalogDisplay("Produkt markerad för borttagning.");
     }
     function removeCategory(catKey) {
       categories = readCatalogFromEditor();
@@ -3916,7 +3980,7 @@
           items: [{ id: generateId("ny-kategori"), name: "Ny produkt", price: 0 }] }];
       }
       if (hadOpen) { state.currentCategory = null; }
-      syncCatalogAndRefresh("Kategori borttagen.");
+      refreshCatalogDisplay("Kategori markerad för borttagning.");
     }
 
     /* ── Offers editor ── */
@@ -4346,17 +4410,44 @@
     reportLoginOverlay.addEventListener("click", e => {
       if (e.target === reportLoginOverlay) closeReportLogin();
     });
+    async function tryAdminLogout(exitFn) {
+      if (_catalogUnsaved) {
+        // choice = true → Spara & logga ut
+        // choice = false → Lämna utan att spara
+        // choice = null → Avbryt (stanna kvar)
+        const choice = await showGlobalModal({
+          title: "Osparade ändringar",
+          subtitle: "Du har ändringar som inte sparats ännu. Vad vill du göra?",
+          type: "confirm",
+          confirmLabel: "💾 Spara & logga ut",
+          cancelLabel: "↩ Lämna utan att spara",
+          cancelValue: false
+        });
+        if (choice === null) return; // Stäng-modal — stanna kvar i admin
+        if (choice === true) {
+          saveCatalogChanges();
+        } else {
+          // Kasta bort osparade ändringar — läs tillbaka från localStorage
+          categories = loadCatalog();
+          _catalogUnsaved = false;
+        }
+      }
+      exitFn();
+    }
+
     reportLogoutBtn.addEventListener("click", () => {
       if (IS_MOBILE_VIEW) {
-        document.querySelector(".viewport").style.display = "none";
-        document.getElementById("mobileApp").style.display = "block";
-        document.getElementById("mobileAdminPanel").style.display = "block";
-        document.getElementById("mobileOverview").style.display = "none";
-        document.body.style.overflow = "auto";
-        document.body.style.background = "linear-gradient(160deg,#f0f7f4 0%,#e8f4f8 50%,#f5f0eb 100%)";
+        tryAdminLogout(() => {
+          document.querySelector(".viewport").style.display = "none";
+          document.getElementById("mobileApp").style.display = "block";
+          document.getElementById("mobileAdminPanel").style.display = "block";
+          document.getElementById("mobileOverview").style.display = "none";
+          document.body.style.overflow = "auto";
+          document.body.style.background = "linear-gradient(160deg,#f0f7f4 0%,#e8f4f8 50%,#f5f0eb 100%)";
+        });
         return;
       }
-      openOverview();
+      tryAdminLogout(() => openOverview());
     });
 
     // Hamburger menu toggle
@@ -5110,7 +5201,7 @@
     /* ── Global modal ── */
     let globalModalResolve = null;
 
-    function showGlobalModal({ title, subtitle = "", type = "password", confirmLabel = "Bekräfta" }) {
+    function showGlobalModal({ title, subtitle = "", type = "password", confirmLabel = "Bekräfta", cancelLabel = "Avbryt", cancelValue = null }) {
       return new Promise((resolve) => {
         globalModalResolve = resolve;
 
@@ -5118,6 +5209,9 @@
         document.getElementById("globalModalSubtitle").textContent = subtitle;
         document.getElementById("globalModalError").textContent = "";
         document.getElementById("globalModalConfirmBtn").textContent = confirmLabel;
+        const cancelBtn = document.getElementById("globalModalCancelBtn");
+        cancelBtn.textContent = cancelLabel;
+        cancelBtn._cancelValue = cancelValue;
 
         const pwInput = document.getElementById("globalModalInput");
         const numInput = document.getElementById("globalModalNumberInput");
@@ -5152,7 +5246,10 @@
       }
     }
 
-    document.getElementById("globalModalCancelBtn").addEventListener("click", () => closeGlobalModal(null));
+    document.getElementById("globalModalCancelBtn").addEventListener("click", (e) => {
+      const val = e.currentTarget._cancelValue !== undefined ? e.currentTarget._cancelValue : null;
+      closeGlobalModal(val);
+    });
 
     document.getElementById("globalModalConfirmBtn").addEventListener("click", () => {
       const pwInput = document.getElementById("globalModalInput");
@@ -5227,12 +5324,14 @@
 
       // Mobile admin logout — tillbaka till mobilkiosk
       document.getElementById("mobileAdminLogoutBtn").addEventListener("click", () => {
-        document.getElementById("mobileAdminPanel").style.display = "none";
-        document.querySelector(".viewport").style.display = "none";
-        document.getElementById("mobileApp").style.display = "block";
-        document.getElementById("mobileOverview").style.display = "block";
-        document.body.style.overflow = "auto";
-        document.body.style.background = "linear-gradient(160deg,#f0f7f4 0%,#e8f4f8 50%,#f5f0eb 100%)";
+        tryAdminLogout(() => {
+          document.getElementById("mobileAdminPanel").style.display = "none";
+          document.querySelector(".viewport").style.display = "none";
+          document.getElementById("mobileApp").style.display = "block";
+          document.getElementById("mobileOverview").style.display = "block";
+          document.body.style.overflow = "auto";
+          document.body.style.background = "linear-gradient(160deg,#f0f7f4 0%,#e8f4f8 50%,#f5f0eb 100%)";
+        });
       });
 
       // Mobile admin grid buttons
