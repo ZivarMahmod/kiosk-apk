@@ -3062,7 +3062,7 @@
       const valjKnappInst = loadValjKnappInstallningar();
       let bubblaPlacerad = false;
       offersGrid.innerHTML = offers.map((o, i) => {
-        const harKnapp = o.paketpris && valjKnappInst.visaValjKnapp;
+        const harKnapp = o.paketpris && (o.visaKnapp !== false);
         const visaBubblaHär = harKnapp && !bubblaPlacerad && bubblaInst.visaBubbla;
         if (visaBubblaHär) bubblaPlacerad = true;
         return `
@@ -3824,6 +3824,10 @@
               <button type="button" class="catalog-small-btn offer-add-produkt-btn">+ Lägg till</button>
             </div>
           </div>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:8px;">
+            <input type="checkbox" class="offer-visa-knapp" ${offer.visaKnapp !== false ? 'checked' : ''} />
+            <label style="font-family:Georgia,serif;color:#2c3e35;font-size:14px;">Visa "Ja, tack!"-knapp</label>
+          </div>
         `;
         container.appendChild(card);
 
@@ -3903,6 +3907,7 @@
         const title = (card.querySelector(".offer-title") || {}).value || "";
         const desc = (card.querySelector(".offer-desc") || {}).value || "";
         const paketpris = parseFloat((card.querySelector(".offer-paketpris") || {}).value) || 0;
+        const visaKnapp = (card.querySelector(".offer-visa-knapp") || {}).checked !== false;
 
         const produkter = [];
         card.querySelectorAll(".offer-produkt-row").forEach(row => {
@@ -3917,7 +3922,8 @@
           type, title, desc,
           price: paketpris ? paketpris + " kr" : "",
           paketpris,
-          produkter
+          produkter,
+          visaKnapp
         });
       });
       saveOffers(offers);
@@ -3958,7 +3964,8 @@
           title: (card.querySelector(".offer-title") || {}).value || "",
           desc: (card.querySelector(".offer-desc") || {}).value || "",
           paketpris: parseFloat((card.querySelector(".offer-paketpris") || {}).value) || 0,
-          produkter
+          produkter,
+          visaKnapp: (card.querySelector(".offer-visa-knapp") || {}).checked !== false
         });
       });
       return offers;
