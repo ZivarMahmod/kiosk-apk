@@ -2509,40 +2509,52 @@
         return Array.isArray(parsed) ? parsed : [];
       } catch(e) { return []; }
     }
-    function saveReceipt(receiptId, cart, total) {
+    async function saveReceipt(receiptId, cart, total) {
       const now = new Date();
+      const datum = now.toLocaleDateString("sv-SE");
+      const tid = now.toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" });
+
+      // Dubblettskydd
+      const receipts = loadReceipts();
+      if (receipts.some(r => String(r.id) === String(receiptId))) return;
+
       const receipt = {
         id: receiptId,
         time: now.toISOString(),
-        items: cart.map(i => ({ name: i.name, qty: i.qty, sum: i.sum })),
+        datum,
+        tid,
+        items: cart.map(i => ({ name: i.name, qty: i.qty, price: i.price, sum: i.sum })),
         total,
         tagged: false,
         tagType: null
       };
-      // Spara i localStorage (befintligt format, hela arrayen)
-      const receipts = loadReceipts();
+
+      // Steg 1: localStorage FÖRST
       receipts.push(receipt);
       localStorage.setItem(RECEIPT_STORAGE_KEY, JSON.stringify(receipts));
 
-      // Skriv till Firebase i läsbart format per kvitto
+      // Steg 2: Firebase EFTER — läsbart format per kvitto
       if (window._fbDb && !_fbSyncPaused) {
-        const year = now.getFullYear();
-        const kvittoNummer = `ZH-${year}-${receiptId}`;
-        const fbReceipt = {
-          kvittoNummer,
-          datum: now.toLocaleDateString("sv-SE"),          // "2026-03-17"
-          tid: now.toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" }), // "14:32"
-          betalning: "Swish",
-          produkter: cart.map(i => ({
-            namn: i.name,
-            antal: i.qty,
-            prisStyck: i.price,
-            prisTotal: i.sum
-          })),
-          totalSumma: total
-        };
-        // Skriv som /kvitton/<kvittoNummer> — inte som array
-        fbWrite("kvitton/" + kvittoNummer, fbReceipt);
+        try {
+          const kvittoNummer = `ZH-${now.getFullYear()}-${receiptId}`;
+          const fbReceipt = {
+            kvittoNummer,
+            datum,
+            tid,
+            betalning: "Swish",
+            produkter: cart.map(i => ({
+              namn: i.name,
+              antal: i.qty,
+              prisStyck: i.price,
+              prisTotal: i.sum
+            })),
+            totalSumma: total,
+            tagg: null
+          };
+          await fbWrite("kvitton/" + kvittoNummer, fbReceipt);
+        } catch(e) {
+          console.warn("Kvitto Firebase-fel:", e);
+        }
       }
     }
 
@@ -3914,9 +3926,23 @@
 
           localStorage.setItem(RECEIPT_STORAGE_KEY, JSON.stringify(receipts));
           fbSyncAfterSave(RECEIPT_STORAGE_KEY);
+          // Uppdatera tagg i Firebase per-kvitto
+          fbUpdateReceiptTag(r.id, r.tagType);
           renderReceiptsAdmin();
         });
       });
+    }
+
+    // Synka tagg till Firebase per-kvitto nod
+    function fbUpdateReceiptTag(receiptId, tagType) {
+      if (!window._fbDb || _fbSyncPaused) return;
+      // Hitta kvittonumret i Firebase-format
+      const receipts = loadReceipts();
+      const r = receipts.find(r => String(r.id) === String(receiptId));
+      if (!r) return;
+      const year = new Date(r.time).getFullYear();
+      const kvittoNummer = `ZH-${year}-${receiptId}`;
+      fbWrite("kvitton/" + kvittoNummer + "/tagg", tagType || null);
     }
 
     /* ── Inventory editor (unified Lager & Stock) ── */
@@ -4300,6 +4326,17 @@
       const agg = aggregateSalesByProduct(sales);
       const tags = getReceiptTagSummary(mode);
 
+      // Räkna bort taggade transaktioner från huvudsiffrorna
+      let taggedTransactions = 0, taggedValue = 0, taggedItems = 0;
+      Object.values(tags).forEach(t => {
+        taggedTransactions += t.count;
+        taggedValue += t.total;
+        t.items.forEach(i => { taggedItems += Number(i.qty || 0); });
+      });
+      const netTransactions = agg.totalTransactions - taggedTransactions;
+      const netValue = agg.totalValue - taggedValue;
+      const netItems = agg.totalItems - taggedItems;
+
       const modeButtons = modes.map(m =>
         `<button class="mav-mode-btn mav-btn" data-mode="${m.key}" style="${m.key === mode ? 'background:rgba(108,99,255,.2);border-color:rgba(108,99,255,.4);color:#a78bfa;' : ''}">${m.label}</button>`
       ).join("");
@@ -4321,23 +4358,29 @@
         `).join("");
       }
 
+      // Interna transaktioner (taggade)
       let tagHtml = "";
-      Object.values(tags).forEach(t => {
-        if (t.count > 0) {
-          tagHtml += `<div class="mav-card" style="border-color:${t.def.border};">
-            <div style="color:${t.def.color};font-weight:700;margin-bottom:4px;">${t.def.emoji} ${escapeHtml(t.def.label)} — ${t.count} st (−${t.total} kr)</div>
-          </div>`;
-        }
-      });
+      if (taggedTransactions > 0) {
+        tagHtml += `<div style="border-top:1px solid rgba(255,255,255,.08);padding-top:12px;margin-top:4px;margin-bottom:12px;">
+          <div style="font-size:13px;color:rgba(255,255,255,.4);letter-spacing:1px;margin-bottom:8px;">INTERNA TRANSAKTIONER</div>`;
+        Object.values(tags).forEach(t => {
+          if (t.count > 0) {
+            tagHtml += `<div class="mav-card" style="border-color:${t.def.border};">
+              <div style="color:${t.def.color};font-weight:700;">${t.def.emoji} ${escapeHtml(t.def.label)} — ${t.count} st / −${t.total} kr</div>
+            </div>`;
+          }
+        });
+        tagHtml += `</div>`;
+      }
 
       return `
         <div style="display:grid;grid-template-columns:repeat(${modes.length},1fr);gap:6px;margin-bottom:16px;">
           ${modeButtons}
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px;">
-          <div class="mav-stat"><div class="mav-stat-label">TRANS.</div><div class="mav-stat-value">${agg.totalTransactions}</div></div>
-          <div class="mav-stat"><div class="mav-stat-label">ARTIKLAR</div><div class="mav-stat-value">${agg.totalItems}</div></div>
-          <div class="mav-stat"><div class="mav-stat-label">TOTALT</div><div class="mav-stat-value">${formatKr(agg.totalValue)}</div></div>
+          <div class="mav-stat"><div class="mav-stat-label">KÖPT</div><div class="mav-stat-value">${Math.max(0, netTransactions)}</div></div>
+          <div class="mav-stat"><div class="mav-stat-label">ARTIKLAR</div><div class="mav-stat-value">${Math.max(0, netItems)}</div></div>
+          <div class="mav-stat"><div class="mav-stat-label">TOTALT</div><div class="mav-stat-value">${formatKr(Math.max(0, netValue))}</div></div>
         </div>
         ${tagHtml}
         ${catHtml}
@@ -4440,52 +4483,86 @@
 
     /* ── 6. Kvitton ── */
     function renderMobileAdminReceipts() {
-      const receipts = loadReceipts().slice().reverse();
+      const allReceipts = loadReceipts().slice().reverse();
       const allTags = loadTags();
-      if (!receipts.length) return `<div style="color:rgba(255,255,255,.4);text-align:center;padding:20px;">Inga kvitton registrerade.</div>`;
+      if (!allReceipts.length) return `<div style="color:rgba(255,255,255,.4);text-align:center;padding:20px;">Inga kvitton registrerade.</div>`;
 
-      let metaText = `${receipts.length} kvitton totalt.`;
+      const untagged = allReceipts.filter(r => !r.tagType);
+      const tagGroups = {};
       allTags.forEach(tag => {
-        const tagged = receipts.filter(r => r.tagType === tag.id);
+        const items = allReceipts.filter(r => r.tagType === tag.id);
+        if (items.length) tagGroups[tag.id] = { tag, items };
+      });
+
+      let metaText = `${allReceipts.length} kvitton totalt (${untagged.length} otaggade).`;
+      allTags.forEach(tag => {
+        const tagged = allReceipts.filter(r => r.tagType === tag.id);
         if (tagged.length) metaText += ` ${tag.label}: ${tagged.length} st.`;
+      });
+
+      function receiptCard(r) {
+        const tagDef = r.tagType ? getTagDef(r.tagType) : null;
+        const borderStyle = tagDef ? `border-color:${tagDef.border};opacity:.7;` : "";
+        return `
+          <div class="mav-card" style="${borderStyle}">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+              <span style="font-size:20px;font-weight:700;color:#ffd966;">#${escapeHtml(r.id)}</span>
+              ${tagDef ? `<span style="font-size:11px;background:${tagDef.bg};color:${tagDef.color};padding:2px 8px;border-radius:6px;">${tagDef.emoji} ${escapeHtml(tagDef.label)}</span>` : ""}
+            </div>
+            <div style="font-size:12px;color:rgba(255,255,255,.4);margin-bottom:6px;">${r.datum || new Date(r.time).toLocaleDateString("sv-SE")} ${r.tid || new Date(r.time).toLocaleTimeString("sv-SE",{hour:"2-digit",minute:"2-digit"})}</div>
+            ${r.items.map(i => `
+              <div style="display:flex;justify-content:space-between;padding:2px 0;font-size:14px;">
+                <span>${escapeHtml(i.qty)} × ${escapeHtml(i.name)}</span>
+                <span>${escapeHtml(i.sum)} kr</span>
+              </div>
+            `).join("")}
+            <div style="text-align:right;font-weight:700;font-size:18px;margin-top:6px;${r.tagType ? 'text-decoration:line-through;opacity:.5;' : ''}">
+              ${escapeHtml(r.total)} kr
+            </div>
+            <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">
+              ${allTags.map(tag => `
+                <button class="mav-tag-btn" data-receipt="${escapeHtml(r.id)}" data-tag="${escapeHtml(tag.id)}"
+                  style="font-size:12px;padding:4px 10px;border-radius:6px;cursor:pointer;font-family:Georgia,serif;
+                  ${r.tagType === tag.id
+                    ? `background:${tag.bg};color:${tag.color};border:1px solid ${tag.border};`
+                    : `background:rgba(255,255,255,.06);color:rgba(255,255,255,.5);border:1px solid rgba(255,255,255,.1);`
+                  }">
+                  ${r.tagType === tag.id ? "✓ " : ""}${escapeHtml(tag.label)}
+                </button>
+              `).join("")}
+              ${r.tagType ? `<button class="mav-delete-receipt-btn" data-receipt="${escapeHtml(r.id)}"
+                style="font-size:12px;padding:4px 10px;border-radius:6px;cursor:pointer;font-family:Georgia,serif;
+                background:rgba(248,113,113,.1);color:#f87171;border:1px solid rgba(248,113,113,.3);">
+                🗑 Radera
+              </button>` : ""}
+            </div>
+          </div>
+        `;
+      }
+
+      // Tag group sections with "delete all" button
+      let tagSectionsHtml = "";
+      Object.values(tagGroups).forEach(({ tag, items }) => {
+        const total = items.reduce((s, r) => s + Number(r.total), 0);
+        tagSectionsHtml += `
+          <div style="margin-top:20px;border-top:1px solid rgba(255,255,255,.08);padding-top:16px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+              <span style="font-size:16px;color:${tag.color};font-weight:700;">${tag.emoji} ${escapeHtml(tag.label)} — ${items.length} st / −${total} kr</span>
+              <button class="mav-delete-tag-group-btn" data-tag="${escapeHtml(tag.id)}"
+                style="font-size:11px;padding:4px 10px;border-radius:6px;cursor:pointer;font-family:Georgia,serif;
+                background:rgba(248,113,113,.1);color:#f87171;border:1px solid rgba(248,113,113,.3);">
+                🗑 Radera alla
+              </button>
+            </div>
+            ${items.map(receiptCard).join("")}
+          </div>
+        `;
       });
 
       return `
         <div style="font-size:13px;color:rgba(255,255,255,.4);margin-bottom:12px;">${metaText}</div>
-        ${receipts.map(r => {
-          const tagDef = r.tagType ? getTagDef(r.tagType) : null;
-          const borderStyle = tagDef ? `border-color:${tagDef.border};opacity:.7;` : "";
-          return `
-            <div class="mav-card" style="${borderStyle}">
-              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-                <span style="font-size:20px;font-weight:700;color:#ffd966;">#${escapeHtml(r.id)}</span>
-                ${tagDef ? `<span style="font-size:11px;background:${tagDef.bg};color:${tagDef.color};padding:2px 8px;border-radius:6px;">${tagDef.emoji} ${escapeHtml(tagDef.label)}</span>` : ""}
-              </div>
-              <div style="font-size:12px;color:rgba(255,255,255,.4);margin-bottom:6px;">${new Date(r.time).toLocaleString("sv-SE")}</div>
-              ${r.items.map(i => `
-                <div style="display:flex;justify-content:space-between;padding:2px 0;font-size:14px;">
-                  <span>${escapeHtml(i.qty)} × ${escapeHtml(i.name)}</span>
-                  <span>${escapeHtml(i.sum)} kr</span>
-                </div>
-              `).join("")}
-              <div style="text-align:right;font-weight:700;font-size:18px;margin-top:6px;${r.tagType ? 'text-decoration:line-through;opacity:.5;' : ''}">
-                ${escapeHtml(r.total)} kr
-              </div>
-              <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">
-                ${allTags.map(tag => `
-                  <button class="mav-tag-btn" data-receipt="${escapeHtml(r.id)}" data-tag="${escapeHtml(tag.id)}"
-                    style="font-size:12px;padding:4px 10px;border-radius:6px;cursor:pointer;font-family:Georgia,serif;
-                    ${r.tagType === tag.id
-                      ? `background:${tag.bg};color:${tag.color};border:1px solid ${tag.border};`
-                      : `background:rgba(255,255,255,.06);color:rgba(255,255,255,.5);border:1px solid rgba(255,255,255,.1);`
-                    }">
-                    ${r.tagType === tag.id ? "✓ " : ""}${escapeHtml(tag.label)}
-                  </button>
-                `).join("")}
-              </div>
-            </div>
-          `;
-        }).join("")}
+        ${untagged.map(receiptCard).join("")}
+        ${tagSectionsHtml}
       `;
     }
 
@@ -4680,6 +4757,7 @@
         }
 
         case "receipts": {
+          // Tagga kvitto
           document.querySelectorAll(".mav-tag-btn").forEach(btn => {
             btn.addEventListener("click", async () => {
               const receiptId = btn.dataset.receipt;
@@ -4690,7 +4768,38 @@
               const pw = await showGlobalModal({ title: "Lösenord", subtitle: `Tagga kvitto #${receiptId}`, type: "password", confirmLabel: "OK" });
               if (pw !== getReceiptDeletePassword()) return;
               r.tagType = r.tagType === tagId ? null : tagId;
+              r.tagged = !!r.tagType;
               localStorage.setItem(RECEIPT_STORAGE_KEY, JSON.stringify(receipts));
+              fbSyncAfterSave(RECEIPT_STORAGE_KEY);
+              fbUpdateReceiptTag(r.id, r.tagType);
+              openMobileAdminSection("receipts");
+            });
+          });
+          // Radera enskilt kvitto
+          document.querySelectorAll(".mav-delete-receipt-btn").forEach(btn => {
+            btn.addEventListener("click", async () => {
+              const receiptId = btn.dataset.receipt;
+              const pw = await showGlobalModal({ title: "Lösenord", subtitle: `Radera kvitto #${receiptId}?`, type: "password", confirmLabel: "Radera" });
+              if (pw !== getReceiptDeletePassword()) return;
+              let receipts = loadReceipts();
+              receipts = receipts.filter(r => String(r.id) !== String(receiptId));
+              localStorage.setItem(RECEIPT_STORAGE_KEY, JSON.stringify(receipts));
+              fbSyncAfterSave(RECEIPT_STORAGE_KEY);
+              openMobileAdminSection("receipts");
+            });
+          });
+          // Radera alla med en viss tagg
+          document.querySelectorAll(".mav-delete-tag-group-btn").forEach(btn => {
+            btn.addEventListener("click", async () => {
+              const tagId = btn.dataset.tag;
+              const tagDef = getTagDef(tagId);
+              const tagLabel = tagDef ? tagDef.label : tagId;
+              const receipts = loadReceipts();
+              const count = receipts.filter(r => r.tagType === tagId).length;
+              const pw = await showGlobalModal({ title: "Lösenord", subtitle: `Radera ${count} kvitton med taggen "${tagLabel}"?`, type: "password", confirmLabel: "Radera alla" });
+              if (pw !== getReceiptDeletePassword()) return;
+              const filtered = receipts.filter(r => r.tagType !== tagId);
+              localStorage.setItem(RECEIPT_STORAGE_KEY, JSON.stringify(filtered));
               fbSyncAfterSave(RECEIPT_STORAGE_KEY);
               openMobileAdminSection("receipts");
             });
