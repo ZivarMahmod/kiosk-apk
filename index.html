@@ -257,9 +257,16 @@
       letter-spacing: 1.5px;
       text-transform: uppercase;
       border-radius: 8px;
-      padding: 4px 12px;
+      padding: 6px 12px;
       white-space: nowrap;
       flex-shrink: 0;
+      display: inline-block;
+      height: fit-content;
+    }
+    .offer-pill[data-type="VECKANS DEAL"],
+    .offer-pill[data-type="NYHET"] {
+      font-size: 15px;
+      padding: 8px 12px;
     }
     .offer-info { min-width: 0; }
     .offer-title {
@@ -309,7 +316,7 @@
     /* Erbjudande-pil-bubbla */
     .erbjudande-pil-wrapper {
       position: absolute;
-      top: calc(100% + 16px);
+      top: calc(100% + 28px);
       left: 50%;
       transform: translateX(-50%);
       z-index: 10;
@@ -319,11 +326,11 @@
       background: linear-gradient(135deg, #72383D, #8B4449);
       color: #EFE9E1;
       border-radius: 16px;
-      padding: 12px 24px;
+      padding: 14px 24px;
       font-family: Georgia, serif;
       text-align: center;
       box-shadow: 0 4px 15px rgba(114,56,61,0.4);
-      animation: pilHopp 1.8s ease-in-out infinite;
+      animation: pilHopp 3.2s ease-in-out infinite;
       position: relative;
       max-width: 220px;
       width: max-content;
@@ -339,18 +346,18 @@
       border-color: transparent transparent #72383D;
     }
     .pil-emoji {
-      font-size: 24px;
+      font-size: 28px;
       display: block;
       animation: pilPeka 1s ease-in-out infinite alternate;
     }
     .pil-text {
-      font-size: 13px;
+      font-size: 15px;
       font-weight: bold;
       color: #EFE9E1;
-      margin: 4px 0 2px;
+      margin: 6px 0 3px;
     }
     .pil-subtext {
-      font-size: 12px;
+      font-size: 14px;
       color: #D1C7BD;
       margin: 0;
     }
@@ -3072,7 +3079,7 @@
         return `
         <div class="offer-card" style="position:relative;overflow:visible;display:flex;align-items:center;gap:12px;" data-offer-idx="${i}">
           <div class="offer-info" style="flex:1;">
-            <div class="offer-pill">${escapeHtml(o.type)}</div>
+            <div class="offer-pill" data-type="${escapeHtml(o.type)}">${escapeHtml(o.type)}</div>
             <div class="offer-title">${escapeHtml(o.title)}</div>
             <div class="offer-desc">${escapeHtml(o.desc)}</div>
             ${o.price ? `<div class="offer-price">${escapeHtml(o.price)}</div>` : ""}
