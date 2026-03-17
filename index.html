@@ -3134,6 +3134,7 @@
     function renderInventoryEditor() {
       const inv = loadInventory();
       const editor = document.getElementById("inventoryEditor");
+      editor.innerHTML = "";
       const rows = Object.entries(inv);
 
       if (!rows.length) {
@@ -3189,6 +3190,7 @@
     function renderStockEditor() {
       const stock = loadStock();
       const editor = document.getElementById("stockEditor");
+      editor.innerHTML = "";
       const rows = Object.entries(stock);
 
       if (!rows.length) {
@@ -3197,7 +3199,7 @@
       }
 
       editor.innerHTML = rows.map(([name, qty]) => {
-        const low = typeof qty === "number" && qty < 10;
+        const low = typeof qty === "number" && qty > 0 && qty < 10;
         return `
           <div class="catalog-item-row" style="margin-bottom:8px;display:grid;grid-template-columns:1fr 80px auto;gap:8px;align-items:start;">
             <div>
