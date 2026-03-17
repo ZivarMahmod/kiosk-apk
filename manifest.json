@@ -1,7 +1,7 @@
 {
   "name": "Zivert Holms hörna",
   "short_name": "ZH Kiosk",
-  "start_url": "/?mobile",
+  "start_url": "/zivert-holm-kiosk/?mobile",
   "display": "standalone",
   "background_color": "#0f0c29",
   "theme_color": "#f5a623",
