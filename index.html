@@ -3069,29 +3069,23 @@
         const visaBubblaHär = harKnapp && !bubblaPlacerad && bubblaInst.visaBubbla;
         if (visaBubblaHär) bubblaPlacerad = true;
         return `
-        <div class="offer-card" style="position:relative;overflow:visible;display:flex;flex-direction:column;gap:12px;" data-offer-idx="${i}">
-          <div style="display:flex;align-items:flex-start;gap:12px;">
-            <div style="display:flex;flex-direction:column;flex:1;">
-              <div class="offer-pill">${escapeHtml(o.type)}</div>
-              <div class="offer-info">
-                <div class="offer-title">${escapeHtml(o.title)}</div>
-                <div class="offer-desc">${escapeHtml(o.desc)}</div>
-                ${o.price ? `<div class="offer-price">${escapeHtml(o.price)}</div>` : ""}
+        <div class="offer-card" style="position:relative;overflow:visible;display:flex;align-items:center;gap:12px;" data-offer-idx="${i}">
+          <div class="offer-info" style="flex:1;">
+            <div class="offer-pill">${escapeHtml(o.type)}</div>
+            <div class="offer-title">${escapeHtml(o.title)}</div>
+            <div class="offer-desc">${escapeHtml(o.desc)}</div>
+            ${o.price ? `<div class="offer-price">${escapeHtml(o.price)}</div>` : ""}
+          </div>
+          ${harKnapp ? `<div style="position:relative;flex-shrink:0;">
+            <button class="erbjudande-välj-knapp" data-offer-idx="${i}">Ja, tack! 🛒</button>
+            ${visaBubblaHär ? `<div class="erbjudande-pil-wrapper" id="erbjudandePilWrapper">
+              <div class="erbjudande-pil-bubbla">
+                <span class="pil-emoji">👆</span>
+                <p class="pil-text">${escapeHtml(bubblaInst.textRad1)}</p>
+                <p class="pil-subtext">${escapeHtml(bubblaInst.textRad2)}</p>
               </div>
-            </div>
-          </div>
-          <div style="display:flex;justify-content:center;position:relative;">
-            ${harKnapp ? `<div style="position:relative;">
-              <button class="erbjudande-välj-knapp" data-offer-idx="${i}">Ja, tack! 🛒</button>
-              ${visaBubblaHär ? `<div class="erbjudande-pil-wrapper" id="erbjudandePilWrapper">
-                <div class="erbjudande-pil-bubbla">
-                  <span class="pil-emoji">👆</span>
-                  <p class="pil-text">${escapeHtml(bubblaInst.textRad1)}</p>
-                  <p class="pil-subtext">${escapeHtml(bubblaInst.textRad2)}</p>
-                </div>
-              </div>` : ""}
             </div>` : ""}
-          </div>
+          </div>` : ""}
         </div>`;
       }).join("");
 
