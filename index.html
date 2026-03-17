@@ -903,21 +903,34 @@
       justify-content: center;
     }
     .paminnelse-bubbla {
+      position: relative;
       background: #fffbe6;
       color: #333;
       border: 2px solid #f0c040;
-      border-radius: 16px;
-      padding: 10px 16px;
-      font-size: 18px;
+      border-radius: 20px;
+      padding: 12px 20px;
+      font-size: 15px;
+      font-weight: bold;
       font-family: Georgia, serif;
       text-align: center;
-      animation: pulsera 2s infinite;
+      margin-top: 12px;
+      animation: bubblaHopp 1.5s ease-in-out infinite;
       pointer-events: none;
-      margin-top: 8px;
     }
-    @keyframes pulsera {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.7; transform: scale(1.03); }
+    .paminnelse-bubbla::after {
+      content: '';
+      position: absolute;
+      bottom: -14px;
+      left: 50%;
+      transform: translateX(-50%);
+      border-width: 14px 10px 0;
+      border-style: solid;
+      border-color: #f0c040 transparent transparent;
+    }
+    @keyframes bubblaHopp {
+      0%, 100% { transform: translateY(0) scale(1); }
+      30% { transform: translateY(-6px) scale(1.03); }
+      60% { transform: translateY(-3px) scale(1.01); }
     }
     .pay-meta { text-align: center; display: grid; gap: 6px; }
     .pay-amount {
@@ -2943,7 +2956,7 @@
         time: now.toISOString(),
         datum,
         tid,
-        items: cart.map(i => ({ name: i.name, qty: i.qty, price: i.price, sum: i.sum })),
+        items: cart.map(i => ({ name: i.name, qty: i.qty, price: i.price, sum: i.sum, categoryKey: i.categoryKey, categoryTitle: i.categoryTitle, itemId: i.itemId })),
         total,
         tagged: false,
         tagType: null
@@ -3137,7 +3150,7 @@
       return lines.join("\n").trim();
     }
     function getReceiptTagSummary(mode) {
-      const receipts = loadReceipts();
+      const receipts = loadReceipts().filter(r => r.status !== "ej_registrerad");
       const now = new Date();
       const startToday = getStartOfToday();
       const startWeek = getStartOfWeek(now);
@@ -3640,7 +3653,7 @@
       showReceipt();
     });
     payOverlay.addEventListener("click", e => {
-      if (e.target === payOverlay) closePaymentModal({ recordSaleOnClose: true });
+      if (e.target === payOverlay) closePaymentModal({ recordSaleOnClose: false });
     });
     hiddenReportTrigger.addEventListener("click", () => openReportLogin());
     reportLoginCancelBtn.addEventListener("click", () => closeReportLogin());
@@ -4015,6 +4028,10 @@
                   </div>
                   <div style="display:flex;align-items:center;gap:6px;">
                     <span style="font-size:14px;color:rgba(255,255,255,.45);">${r.datum || ''} ${r.tid || ''}</span>
+                    <button class="catalog-small-btn desktop-confirm-unreg-btn" data-receipt-id="${escapeHtml(r.id)}" type="button"
+                      style="font-size:11px;padding:2px 8px;background:rgba(52,211,153,.1);color:#34d399;border:1px solid rgba(52,211,153,.3);">
+                      ✓ Bekräfta köp
+                    </button>
                     <button class="catalog-small-btn desktop-delete-unreg-btn" data-receipt-id="${escapeHtml(r.id)}" type="button"
                       style="font-size:11px;padding:2px 8px;background:rgba(248,113,113,.1);color:#f87171;border:1px solid rgba(248,113,113,.3);">
                       🗑 Radera
@@ -4048,6 +4065,27 @@
         ${untagged.map(receiptCardHtml).join("")}
         ${tagSectionsHtml}
       `;
+
+      // Confirm unregistered receipts
+      list.querySelectorAll(".desktop-confirm-unreg-btn").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          const receiptId = btn.dataset.receiptId;
+          const receipts = loadReceipts();
+          const r = receipts.find(r => String(r.id) === String(receiptId));
+          if (!r) return;
+          r.status = "registrerad";
+          localStorage.setItem(RECEIPT_STORAGE_KEY, JSON.stringify(receipts));
+          // Registrera försäljningen
+          recordSale(r.items.map(i => ({ ...i, categoryKey: i.categoryKey || "", categoryTitle: i.categoryTitle || "", itemId: i.itemId || "", sum: i.sum || i.qty * i.price })));
+          if (window._fbDb && !_fbSyncPaused) {
+            const year = new Date(r.time).getFullYear();
+            const kvittoNummer = `ZH-${year}-${receiptId}`;
+            fbWrite("kvitton/" + kvittoNummer + "/status", "registrerad");
+          }
+          await showGlobalModal({ title: "✓ Bekräftat", subtitle: `Kvitto #${receiptId} bekräftat.`, type: "confirm", confirmLabel: "OK" });
+          renderReceiptsAdmin();
+        });
+      });
 
       // Delete unregistered receipts
       list.querySelectorAll(".desktop-delete-unreg-btn").forEach(btn => {
@@ -4845,7 +4883,10 @@
                   </div>
                 `).join("")}
                 <div style="text-align:right;font-weight:700;font-size:18px;margin-top:6px;color:#fbbf24;">${escapeHtml(r.total)} kr</div>
-                <button class="mav-btn mav-delete-unreg-btn" data-receipt="${escapeHtml(r.id)}" style="margin-top:8px;color:#f87171;border-color:rgba(248,113,113,.3);">🗑 Radera</button>
+                <div style="display:flex;gap:6px;margin-top:8px;">
+                  <button class="mav-btn mav-confirm-unreg-btn" data-receipt="${escapeHtml(r.id)}" style="flex:1;color:#34d399;border-color:rgba(52,211,153,.3);">✓ Bekräfta köp</button>
+                  <button class="mav-btn mav-delete-unreg-btn" data-receipt="${escapeHtml(r.id)}" style="flex:1;color:#f87171;border-color:rgba(248,113,113,.3);">🗑 Radera</button>
+                </div>
               </div>
             `).join("")}
           </div>`;
@@ -5062,6 +5103,25 @@
         }
 
         case "receipts": {
+          // Bekräfta oregistrerat kvitto
+          document.querySelectorAll(".mav-confirm-unreg-btn").forEach(btn => {
+            btn.addEventListener("click", async () => {
+              const receiptId = btn.dataset.receipt;
+              const receipts = loadReceipts();
+              const r = receipts.find(r => String(r.id) === String(receiptId));
+              if (!r) return;
+              r.status = "registrerad";
+              localStorage.setItem(RECEIPT_STORAGE_KEY, JSON.stringify(receipts));
+              recordSale(r.items.map(i => ({ ...i, categoryKey: i.categoryKey || "", categoryTitle: i.categoryTitle || "", itemId: i.itemId || "", sum: i.sum || i.qty * i.price })));
+              if (window._fbDb && !_fbSyncPaused) {
+                const year = new Date(r.time).getFullYear();
+                const kvittoNummer = `ZH-${year}-${receiptId}`;
+                fbWrite("kvitton/" + kvittoNummer + "/status", "registrerad");
+              }
+              await showGlobalModal({ title: "✓ Bekräftat", subtitle: `Kvitto #${receiptId} bekräftat.`, type: "confirm", confirmLabel: "OK" });
+              openMobileAdminSection("receipts");
+            });
+          });
           // Radera oregistrerat kvitto
           document.querySelectorAll(".mav-delete-unreg-btn").forEach(btn => {
             btn.addEventListener("click", async () => {
