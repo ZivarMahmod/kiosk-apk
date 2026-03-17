@@ -2208,23 +2208,56 @@
       }
     }
 
-    /* ── Migrate localStorage → Firebase (first time) ── */
-    function migrateToFirebase() {
+    /* ── Migrate localStorage → Firebase (per-key, skips existing) ── */
+    async function migrateToFirebase() {
       if (!window._fbDb) return;
-      console.log("Migrerar localStorage → Firebase...");
-      const updates = {};
-      // JSON keys
-      Object.entries(FB_KEY_MAP).forEach(([lsKey, fbPath]) => {
-        const raw = localStorage.getItem(lsKey);
-        if (raw) {
-          try { updates[fbPath] = JSON.parse(raw); } catch(e) { updates[fbPath] = raw; }
-        }
-      });
-      // Settings
-      const settingsRaw = localStorage.getItem("zivert-holm-settings-v1");
-      if (settingsRaw) {
-        try { updates[FB_SETTINGS_KEY] = JSON.parse(settingsRaw); } catch(e) {}
+      console.log("Kontrollerar Firebase-nycklar mot localStorage...");
+
+      // Hämta hela databasen en gång för att kolla vilka nycklar som finns
+      let existingData = {};
+      try {
+        const snap = await window._fbDb.ref("/").once("value");
+        existingData = snap.exists() ? snap.val() : {};
+      } catch(e) {
+        console.warn("Kunde inte läsa Firebase för migration:", e);
+        return;
       }
+
+      const updates = {};
+      let count = 0;
+
+      // JSON keys från FB_KEY_MAP
+      Object.entries(FB_KEY_MAP).forEach(([lsKey, fbPath]) => {
+        // Hoppa över lösenord — skrivs inte i klartext
+        if (fbPath === "mobileAdminPw" || fbPath === "receiptDeletePw") return;
+
+        if (existingData[fbPath] !== undefined && existingData[fbPath] !== null) return; // redan i Firebase
+        const raw = localStorage.getItem(lsKey);
+        if (!raw) return; // finns inte lokalt heller
+        try { updates[fbPath] = JSON.parse(raw); count++; } catch(e) { updates[fbPath] = raw; count++; }
+      });
+
+      // Settings
+      if (!existingData[FB_SETTINGS_KEY]) {
+        const settingsRaw = localStorage.getItem("zivert-holm-settings-v1");
+        if (settingsRaw) {
+          try {
+            const settings = JSON.parse(settingsRaw);
+            // Ta bort eventuella lösenordsfält innan upload
+            delete settings.adminPassword;
+            delete settings.password;
+            updates[FB_SETTINGS_KEY] = settings;
+            count++;
+          } catch(e) {}
+        }
+      }
+
+      if (count === 0) {
+        console.log("Alla nycklar finns redan i Firebase.");
+        return;
+      }
+
+      console.log(`Migrerar ${count} nycklar till Firebase:`, Object.keys(updates).join(", "));
       window._fbDb.ref("/").update(updates)
         .then(() => console.log("Migration klar."))
         .catch(e => console.warn("Migration failed:", e));
@@ -4800,10 +4833,10 @@
     /* ── Bootstrap ── */
     async function bootstrap() {
       // 1. Ladda från Firebase (3s timeout, fallback till localStorage)
-      const fbLoaded = await loadFromFirebase();
-      if (!fbLoaded && window._fbDb) {
-        // Firebase tom → migrera befintlig localStorage-data
-        migrateToFirebase();
+      await loadFromFirebase();
+      // 2. Migrera saknade nycklar från localStorage → Firebase
+      if (window._fbDb) {
+        await migrateToFirebase();
       }
       _fbReady = true;
 
