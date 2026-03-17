@@ -2993,6 +2993,23 @@
       renderSummary();
       renderCurrentCategory();
     }
+    function updateQty(catKey, itemId, delta) {
+      const current = getQty(catKey, itemId);
+      const newVal = current + delta;
+      setQty(catKey, itemId, newVal);
+    }
+    function updateOfferQty(offerId, delta) {
+      const idx = state.offerCart.findIndex(o => o.id === offerId);
+      if (idx !== -1) {
+        const newQty = state.offerCart[idx].antal + delta;
+        if (newQty <= 0) {
+          state.offerCart.splice(idx, 1);
+        } else {
+          state.offerCart[idx].antal = newQty;
+        }
+        renderSummary();
+      }
+    }
     function cleanupQtyState() {
       const valid = new Set();
       categories.forEach(c => c.items.forEach(it => valid.add(getItemKey(c.key, it.id))));
@@ -3232,14 +3249,35 @@
       if (!cart.length) {
         cartItems.innerHTML = `<div class="cart-empty">Inga produkter valda ännu.</div>`;
       } else {
-        cartItems.innerHTML = cart.map(it => {
+        // Stack items by ID
+        const grouped = new Map();
+        cart.forEach(it => {
+          const key = it.ärErbjudande ? `offer-${it.itemId}` : `${it.categoryKey}-${it.itemId}`;
+          if (!grouped.has(key)) {
+            grouped.set(key, { ...it, stackCount: 0 });
+          }
+          const item = grouped.get(key);
+          item.stackCount += 1;
+          item.qty = item.qty;
+          item.sum = (item.price || 0) * item.qty;
+        });
+
+        cartItems.innerHTML = Array.from(grouped.values()).map(it => {
           if (it.ärErbjudande) {
             return `
               <div class="cart-row" style="background:rgba(240,192,64,.08);border:1px solid rgba(240,192,64,.3);border-radius:10px;padding:12px;margin-bottom:8px;">
                 <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">
                   <div style="flex:1;">
-                    <div style="font-size:14px;font-weight:bold;color:#2c3e35;margin-bottom:4px;">${escapeHtml(it.qty)} × ${escapeHtml(it.name)}</div>
-                    <span style="display:inline-block;background:#f0c040;color:#322D29;font-size:11px;padding:4px 8px;border-radius:6px;font-weight:bold;">🏷 Paket</span>
+                    <div style="font-size:14px;font-weight:bold;color:#2c3e35;margin-bottom:6px;">${escapeHtml(it.name)}</div>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                      <span style="display:inline-block;background:#f0c040;color:#322D29;font-size:11px;padding:4px 8px;border-radius:6px;font-weight:bold;">🏷 Paket</span>
+                      ${it.stackCount > 1 ? `<span style="font-size:12px;color:#6b7c74;">${it.stackCount} st</span>` : ''}
+                    </div>
+                    <div style="display:flex;gap:6px;margin-top:8px;">
+                      <button onclick="updateOfferQty('${it.itemId}', -1)" style="width:28px;height:28px;border:1px solid rgba(0,0,0,.1);background:#f0f4f2;border-radius:6px;color:#2c3e35;font-weight:bold;cursor:pointer;">−</button>
+                      <span style="width:28px;text-align:center;line-height:28px;font-weight:bold;">${it.qty}</span>
+                      <button onclick="updateOfferQty('${it.itemId}', 1)" style="width:28px;height:28px;border:1px solid rgba(0,0,0,.1);background:#f0f4f2;border-radius:6px;color:#2c3e35;font-weight:bold;cursor:pointer;">+</button>
+                    </div>
                   </div>
                   <strong style="color:#c47a3a;font-size:16px;white-space:nowrap;">${escapeHtml(it.sum)} kr</strong>
                 </div>
@@ -3248,8 +3286,14 @@
           } else {
             return `
               <div class="cart-row">
-                <span>${escapeHtml(it.qty)} × ${escapeHtml(it.name)}</span>
-                <strong>${escapeHtml(it.sum)} kr</strong>
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;width:100%;">
+                  <span>${escapeHtml(it.qty)} × ${escapeHtml(it.name)}</span>
+                  <div style="display:flex;align-items:center;gap:6px;white-space:nowrap;">
+                    <button onclick="updateQty('${escapeHtml(it.categoryKey)}', '${escapeHtml(it.itemId)}', -1)" style="width:24px;height:24px;border:1px solid rgba(0,0,0,.1);background:#f0f4f2;border-radius:4px;color:#2c3e35;font-weight:bold;cursor:pointer;font-size:12px;">−</button>
+                    <button onclick="updateQty('${escapeHtml(it.categoryKey)}', '${escapeHtml(it.itemId)}', 1)" style="width:24px;height:24px;border:1px solid rgba(0,0,0,.1);background:#f0f4f2;border-radius:4px;color:#2c3e35;font-weight:bold;cursor:pointer;font-size:12px;">+</button>
+                    <strong style="font-size:14px;min-width:40px;text-align:right;">${escapeHtml(it.sum)} kr</strong>
+                  </div>
+                </div>
               </div>
             `;
           }
