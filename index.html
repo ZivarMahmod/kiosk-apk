@@ -2398,9 +2398,6 @@
       [WISHES_STORAGE_KEY]:         "onskningar",
       [TAGS_STORAGE_KEY]:           "taggar",
       [RECEIPT_COUNTER_KEY]:        "receiptCounter",
-      [MOBILE_ADMIN_PW_KEY]:        "mobileAdminPw",
-      [RECEIPT_DELETE_PASSWORD_KEY]: "receiptDeletePw",
-      [RENSA_PW_KEY]:               "rensaLösenord",
       [BUBBLA_STORAGE_KEY]:          "bubblainställningar",
       [VAJL_KNAPP_STORAGE_KEY]:      "valjKnappInstallningar"
     };
@@ -2471,9 +2468,6 @@
         if (data.taggar)          localStorage.setItem(TAGS_STORAGE_KEY, JSON.stringify(data.taggar));
         if (data.installningar)   localStorage.setItem("zivert-holm-settings-v1", JSON.stringify(data.installningar));
         if (data.receiptCounter)  localStorage.setItem(RECEIPT_COUNTER_KEY, String(data.receiptCounter));
-        if (data.mobileAdminPw)   localStorage.setItem(MOBILE_ADMIN_PW_KEY, data.mobileAdminPw);
-        if (data.receiptDeletePw) localStorage.setItem(RECEIPT_DELETE_PASSWORD_KEY, data.receiptDeletePw);
-        if (data["rensaLösenord"])  localStorage.setItem(RENSA_PW_KEY, data["rensaLösenord"]);
         if (data["bubblainställningar"]) localStorage.setItem(BUBBLA_STORAGE_KEY, JSON.stringify(data["bubblainställningar"]));
         if (data["valjKnappInstallningar"]) localStorage.setItem(VAJL_KNAPP_STORAGE_KEY, JSON.stringify(data["valjKnappInstallningar"]));
         if (data.nolladAllt)       localStorage.setItem(NOLLA_ALLT_KEY, "true");
@@ -2508,9 +2502,6 @@
 
       // JSON keys från FB_KEY_MAP
       Object.entries(FB_KEY_MAP).forEach(([lsKey, fbPath]) => {
-        // Hoppa över lösenord — skrivs inte i klartext
-        if (fbPath === "mobileAdminPw" || fbPath === "receiptDeletePw") return;
-
         if (existingData[fbPath] !== undefined && existingData[fbPath] !== null) return; // redan i Firebase
         const raw = localStorage.getItem(lsKey);
         if (!raw) return; // finns inte lokalt heller
@@ -4375,21 +4366,18 @@
           return;
         }
         localStorage.setItem(MOBILE_ADMIN_PW_KEY, newPw);
-        fbSyncPlain(MOBILE_ADMIN_PW_KEY);
       } else if (changePwTarget === "rensa") {
         if (current !== getRensaPassword()) {
           errorEl.textContent = "Fel nuvarande lösenord.";
           return;
         }
         localStorage.setItem(RENSA_PW_KEY, newPw);
-        fbSyncPlain(RENSA_PW_KEY);
       } else {
         if (current !== getReceiptDeletePassword()) {
           errorEl.textContent = "Fel nuvarande lösenord.";
           return;
         }
         localStorage.setItem(RECEIPT_DELETE_PASSWORD_KEY, newPw);
-        fbSyncPlain(RECEIPT_DELETE_PASSWORD_KEY);
       }
 
       document.getElementById("changePwModal").style.display = "none";
