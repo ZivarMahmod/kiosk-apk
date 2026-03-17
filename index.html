@@ -3110,11 +3110,22 @@
       const title = getModeTitle(mode);
       const tags = getReceiptTagSummary(mode);
 
+      // Exkludera taggade kvitton från huvudsiffrorna
+      let taggedTransactions = 0, taggedValue = 0, taggedItems = 0;
+      Object.values(tags).forEach(t => {
+        taggedTransactions += t.count;
+        taggedValue += t.total;
+        t.items.forEach(i => { taggedItems += Number(i.qty || 0); });
+      });
+      const netTransactions = agg.totalTransactions - taggedTransactions;
+      const netItems = agg.totalItems - taggedItems;
+      const netValue = agg.totalValue - taggedValue;
+
       if (reportPanelTitle) reportPanelTitle.textContent = title;
-      reportSalesCount.textContent = agg.totalTransactions;
-      reportItemsCount.textContent = agg.totalItems;
-      reportTotalValue.textContent = formatKr(agg.totalValue);
-      reportMetaText.textContent = buildMetaText(mode, agg.totalTransactions);
+      reportSalesCount.textContent = netTransactions;
+      reportItemsCount.textContent = netItems;
+      reportTotalValue.textContent = formatKr(netValue);
+      reportMetaText.textContent = buildMetaText(mode, netTransactions);
 
       // Dynamic tag stat cards
       const reportTagStatsEl = document.getElementById("reportTagStats");
@@ -3774,7 +3785,7 @@
     });
 
     function renderReceiptsAdmin() {
-      const receipts = loadReceipts().slice().reverse();
+      const allReceipts = loadReceipts().slice().reverse();
       const meta = document.getElementById("receiptsMetaText");
       const list = document.getElementById("receiptsList");
       const allTags = loadTags();
@@ -3782,34 +3793,32 @@
       // Tag manager
       renderTagManager();
 
-      // Meta text
-      let metaText = `Totalt ${receipts.length} kvitton.`;
+      // Sortera: otaggade först, sedan per tagg-grupp
+      const untagged = allReceipts.filter(r => !r.tagType);
+      const tagGroups = {};
       allTags.forEach(tag => {
-        const tagged = receipts.filter(r => r.tagType === tag.id);
+        const items = allReceipts.filter(r => r.tagType === tag.id);
+        if (items.length) tagGroups[tag.id] = { tag, items };
+      });
+
+      // Meta text
+      let metaText = `Totalt ${allReceipts.length} kvitton (${untagged.length} otaggade).`;
+      allTags.forEach(tag => {
+        const tagged = allReceipts.filter(r => r.tagType === tag.id);
         if (tagged.length) metaText += ` ${tag.label}: ${tagged.length} st (−${tagged.reduce((s,r) => s + Number(r.total), 0)} kr).`;
       });
       meta.textContent = metaText;
 
-      if (!receipts.length) {
+      if (!allReceipts.length) {
         list.innerHTML = '<div class="report-empty">Inga kvitton registrerade ännu.</div>';
         return;
       }
 
-      list.innerHTML = `
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
-          <button class="catalog-small-btn" id="selectAllReceiptsBtn" type="button">Markera alla</button>
-          <button class="catalog-small-btn" id="deselectAllReceiptsBtn" type="button">Avmarkera alla</button>
-          ${allTags.map(tag => `
-            <button class="catalog-small-btn bulk-tag-btn" data-bulk-tag="${escapeHtml(tag.id)}" type="button"
-              style="background:${tag.bg};color:${tag.color};border:1px solid ${tag.border};display:none;font-size:12px;padding:4px 10px;">
-              Tagga alla ${escapeHtml(tag.label)}
-            </button>
-          `).join("")}
-        </div>
-        ${receipts.map(r => {
-          const tagDef = r.tagType ? getTagDef(r.tagType) : null;
-          const borderStyle = tagDef ? `opacity:.55;border:1px solid ${tagDef.border};` : '';
-          return `
+      // Hjälpfunktion för ett kvittokort
+      function receiptCardHtml(r) {
+        const tagDef = r.tagType ? getTagDef(r.tagType) : null;
+        const borderStyle = tagDef ? `opacity:.55;border:1px solid ${tagDef.border};` : '';
+        return `
           <div class="report-group" style="margin-bottom:10px;${borderStyle}">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:8px;">
               <div style="display:flex;align-items:center;gap:10px;">
@@ -3818,7 +3827,7 @@
                 ${tagDef ? `<span style="font-size:12px;background:${tagDef.bg};color:${tagDef.color};padding:3px 10px;border-radius:6px;letter-spacing:1px;">${escapeHtml(tagDef.label)}</span>` : ''}
               </div>
               <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-                <span style="font-size:14px;color:rgba(255,255,255,.45);">${new Date(r.time).toLocaleString("sv-SE")}</span>
+                <span style="font-size:14px;color:rgba(255,255,255,.45);">${r.datum || new Date(r.time).toLocaleDateString("sv-SE")} ${r.tid || new Date(r.time).toLocaleTimeString("sv-SE",{hour:"2-digit",minute:"2-digit"})}</span>
                 ${allTags.map(tag => `
                   <button class="catalog-small-btn" type="button"
                     data-receipt-tag="${escapeHtml(r.id)}"
@@ -3827,6 +3836,10 @@
                     ${r.tagType === tag.id ? '✓ ' : ''}${escapeHtml(tag.label)}
                   </button>
                 `).join("")}
+                ${r.tagType ? `<button class="catalog-small-btn desktop-delete-receipt-btn" data-receipt-id="${escapeHtml(r.id)}" type="button"
+                  style="font-size:11px;padding:2px 8px;background:rgba(248,113,113,.1);color:#f87171;border:1px solid rgba(248,113,113,.3);">
+                  🗑 Radera
+                </button>` : ''}
               </div>
             </div>
             ${r.items.map(i => `
@@ -3839,7 +3852,38 @@
               ${r.tagType ? `<span style="text-decoration:line-through;opacity:.5;">${escapeHtml(r.total)} kr</span>` : `${escapeHtml(r.total)} kr`}
             </div>
           </div>`;
-        }).join("")}
+      }
+
+      // Bygg tagg-sektioner
+      let tagSectionsHtml = "";
+      Object.values(tagGroups).forEach(({ tag, items }) => {
+        const total = items.reduce((s, r) => s + Number(r.total), 0);
+        tagSectionsHtml += `
+          <div style="margin-top:20px;border-top:2px solid ${tag.border};padding-top:16px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+              <span style="font-size:20px;color:${tag.color};font-weight:700;">${tag.emoji} ${escapeHtml(tag.label)} — ${items.length} st / −${total} kr</span>
+              <button class="catalog-small-btn desktop-delete-tag-group-btn" data-tag-id="${escapeHtml(tag.id)}" type="button"
+                style="background:rgba(248,113,113,.1);color:#f87171;border:1px solid rgba(248,113,113,.3);font-size:12px;padding:4px 12px;">
+                🗑 Radera alla ${escapeHtml(tag.label)}
+              </button>
+            </div>
+            ${items.map(receiptCardHtml).join("")}
+          </div>`;
+      });
+
+      list.innerHTML = `
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+          <button class="catalog-small-btn" id="selectAllReceiptsBtn" type="button">Markera alla</button>
+          <button class="catalog-small-btn" id="deselectAllReceiptsBtn" type="button">Avmarkera alla</button>
+          ${allTags.map(tag => `
+            <button class="catalog-small-btn bulk-tag-btn" data-bulk-tag="${escapeHtml(tag.id)}" type="button"
+              style="background:${tag.bg};color:${tag.color};border:1px solid ${tag.border};display:none;font-size:12px;padding:4px 10px;">
+              Tagga alla ${escapeHtml(tag.label)}
+            </button>
+          `).join("")}
+        </div>
+        ${untagged.map(receiptCardHtml).join("")}
+        ${tagSectionsHtml}
       `;
 
       // Checkbox logik
@@ -3928,6 +3972,47 @@
           fbSyncAfterSave(RECEIPT_STORAGE_KEY);
           // Uppdatera tagg i Firebase per-kvitto
           fbUpdateReceiptTag(r.id, r.tagType);
+          renderReceiptsAdmin();
+        });
+      });
+
+      // Radera enskilt taggat kvitto
+      list.querySelectorAll(".desktop-delete-receipt-btn").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          const receiptId = btn.dataset.receiptId;
+          const pw = await showGlobalModal({ title: "Lösenord", subtitle: `Radera kvitto #${receiptId}?`, type: "password", confirmLabel: "Radera" });
+          if (pw === null) return;
+          if (pw !== getReceiptDeletePassword()) {
+            document.getElementById("globalModalError").textContent = "Fel lösenord.";
+            return;
+          }
+          closeGlobalModal();
+          let receipts = loadReceipts();
+          receipts = receipts.filter(r => String(r.id) !== String(receiptId));
+          localStorage.setItem(RECEIPT_STORAGE_KEY, JSON.stringify(receipts));
+          fbSyncAfterSave(RECEIPT_STORAGE_KEY);
+          renderReceiptsAdmin();
+        });
+      });
+
+      // Radera alla kvitton med en viss tagg
+      list.querySelectorAll(".desktop-delete-tag-group-btn").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          const tagId = btn.dataset.tagId;
+          const tagDef = getTagDef(tagId);
+          const tagLabel = tagDef ? tagDef.label : tagId;
+          const receipts = loadReceipts();
+          const count = receipts.filter(r => r.tagType === tagId).length;
+          const pw = await showGlobalModal({ title: "Lösenord", subtitle: `Radera ${count} kvitton med taggen "${tagLabel}"?`, type: "password", confirmLabel: "Radera alla" });
+          if (pw === null) return;
+          if (pw !== getReceiptDeletePassword()) {
+            document.getElementById("globalModalError").textContent = "Fel lösenord.";
+            return;
+          }
+          closeGlobalModal();
+          const filtered = receipts.filter(r => r.tagType !== tagId);
+          localStorage.setItem(RECEIPT_STORAGE_KEY, JSON.stringify(filtered));
+          fbSyncAfterSave(RECEIPT_STORAGE_KEY);
           renderReceiptsAdmin();
         });
       });
