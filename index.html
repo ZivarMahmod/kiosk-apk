@@ -310,8 +310,10 @@
     .erbjudande-pil-wrapper {
       position: absolute;
       top: calc(100% + 8px);
-      right: 16px;
+      right: 50%;
+      transform: translateX(50%);
       z-index: 10;
+      pointer-events: none;
     }
     .erbjudande-pil-bubbla {
       background: linear-gradient(135deg, #72383D, #8B4449);
@@ -329,7 +331,8 @@
       content: '';
       position: absolute;
       top: -12px;
-      left: 30px;
+      left: 50%;
+      transform: translateX(-50%);
       border-width: 0 10px 12px;
       border-style: solid;
       border-color: transparent transparent #72383D;
@@ -1294,7 +1297,7 @@
     .wish-row {
       display: flex;
       justify-content: center;
-      margin-top: 24px;
+      margin-top: 40px;
     }
     .wish-trigger-btn {
       background: #ffffff;
