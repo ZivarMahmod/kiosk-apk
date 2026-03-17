@@ -2281,15 +2281,28 @@
         if (data.lager)       localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(data.lager));
         if (data.erbjudanden) localStorage.setItem(OFFERS_STORAGE_KEY, JSON.stringify(data.erbjudanden));
         if (data.rapport)     localStorage.setItem(SALES_STORAGE_KEY, JSON.stringify(data.rapport));
-        if (data.kvitton)     localStorage.setItem(RECEIPT_STORAGE_KEY, JSON.stringify(data.kvitton));
+        if (data.onskningar)  localStorage.setItem(WISHES_STORAGE_KEY, JSON.stringify(data.onskningar));
+        if (data.taggar)      localStorage.setItem(TAGS_STORAGE_KEY, JSON.stringify(data.taggar));
+        if (data.kvitton && Array.isArray(data.kvitton)) {
+          localStorage.setItem(RECEIPT_STORAGE_KEY, JSON.stringify(data.kvitton));
+        }
         _fbSyncPaused = false;
-        // Re-render kiosk if not mobile
+
+        // Re-render desktop-kiosk
         if (!IS_MOBILE_VIEW) {
           try {
             categories = loadCatalog();
             renderOverview();
             renderCurrentCategory();
             renderSummary();
+          } catch(e) {}
+        }
+        // Re-render mobilkiosk
+        if (IS_MOBILE_VIEW) {
+          try {
+            categories = loadCatalog();
+            renderMobileOverview();
+            renderMobileOffers();
           } catch(e) {}
         }
       });
@@ -4879,6 +4892,9 @@
       renderSummary();
       openOverview();
 
+      // 4. Starta realtidslyssning (BÅDE mobil och desktop)
+      startRealtimeSync();
+
       if (IS_MOBILE_VIEW) {
         document.getElementById("mobileApp").style.display = "block";
         document.querySelector(".viewport").style.display = "none";
@@ -4886,8 +4902,6 @@
         history.pushState(null, "", window.location.href);
       } else {
         fitStage();
-        // 4. Starta realtidslyssning på kiosken
-        startRealtimeSync();
       }
     }
     bootstrap();
