@@ -1724,17 +1724,17 @@
                         <button class="filter-btn danger" id="clearReportDataBtn" type="button">Rensa</button>
                       </div>
                       <div class="stat-grid">
-                        <div class="stat-card">
-                          <div class="stat-label">Registrerade köp</div>
-                          <div class="stat-value" id="reportSalesCount">0</div>
+                        <div class="stat-card" style="border:1px solid rgba(52,211,153,.3);background:rgba(52,211,153,.05);">
+                          <div class="stat-label" style="color:#34d399;">Registrerade köp</div>
+                          <div class="stat-value" id="reportSalesCount" style="color:#34d399;">0</div>
                         </div>
-                        <div class="stat-card">
-                          <div class="stat-label">Sålda artiklar</div>
-                          <div class="stat-value" id="reportItemsCount">0</div>
+                        <div class="stat-card" style="border:1px solid rgba(52,211,153,.3);background:rgba(52,211,153,.05);">
+                          <div class="stat-label" style="color:#34d399;">Sålda artiklar</div>
+                          <div class="stat-value" id="reportItemsCount" style="color:#34d399;">0</div>
                         </div>
-                        <div class="stat-card">
-                          <div class="stat-label">Summerat värde</div>
-                          <div class="stat-value" id="reportTotalValue">0 kr</div>
+                        <div class="stat-card" style="border:1px solid rgba(52,211,153,.3);background:rgba(52,211,153,.05);">
+                          <div class="stat-label" style="color:#34d399;">Summerat värde</div>
+                          <div class="stat-value" id="reportTotalValue" style="color:#34d399;">0 kr</div>
                         </div>
                       </div>
                       <div class="stat-grid" id="reportTagStats" style="margin-top:8px;"></div>
@@ -3210,15 +3210,46 @@
       reportTotalValue.textContent = formatKr(netValue);
       reportMetaText.textContent = buildMetaText(mode, netTransactions);
 
-      // Dynamic tag stat cards
+      // Dynamic tag stat cards + ej registrerade
       const reportTagStatsEl = document.getElementById("reportTagStats");
       if (reportTagStatsEl) {
-        reportTagStatsEl.innerHTML = Object.values(tags).filter(t => t.count > 0).map(t => `
-          <div class="stat-card">
-            <div class="stat-label">${escapeHtml(t.def.emoji)} ${escapeHtml(t.def.label)}</div>
-            <div class="stat-value" style="color:${t.def.color};font-size:18px;">${t.count} st / −${t.total} kr</div>
-          </div>
-        `).join("");
+        // Räkna ej registrerade kvitton i valt tidsintervall
+        const allReceipts = loadReceipts();
+        const now2 = new Date();
+        const startToday2 = getStartOfToday();
+        const startWeek2 = getStartOfWeek(now2);
+        const sevenDaysAgo2 = new Date(startToday2);
+        sevenDaysAgo2.setDate(sevenDaysAgo2.getDate() - 6);
+        const unregFiltered = allReceipts.filter(r => {
+          if (r.status !== "ej_registrerad") return false;
+          const d = new Date(r.time);
+          if (Number.isNaN(d.getTime())) return false;
+          if (mode === "7days") return d >= sevenDaysAgo2;
+          if (mode === "thisWeek") return d >= startWeek2;
+          return true;
+        });
+        const unregCount = unregFiltered.length;
+        const unregValue = unregFiltered.reduce((s, r) => s + Number(r.total || 0), 0);
+        const unregItems = unregFiltered.reduce((s, r) => s + (r.items || []).reduce((a, i) => a + Number(i.qty || 0), 0), 0);
+
+        let tagCardsHtml = Object.values(tags).filter(t => t.count > 0).map(t => {
+          const tagItems = t.items.reduce((s, i) => s + Number(i.qty || 0), 0);
+          return `
+          <div class="stat-card" style="border:1px solid ${t.def.border};background:${t.def.bg};">
+            <div class="stat-label" style="color:${t.def.color};">${escapeHtml(t.def.emoji)} ${escapeHtml(t.def.label)}</div>
+            <div class="stat-value" style="color:${t.def.color};font-size:18px;">${t.count} st / ${tagItems} artiklar / −${t.total} kr</div>
+          </div>`;
+        }).join("");
+
+        if (unregCount > 0) {
+          tagCardsHtml += `
+          <div class="stat-card" style="border:1px solid rgba(251,191,36,.3);background:rgba(251,191,36,.05);">
+            <div class="stat-label" style="color:#fbbf24;">⚠️ Ej registrerade</div>
+            <div class="stat-value" style="color:#fbbf24;font-size:18px;">${unregCount} st / ${unregItems} artiklar / ${unregValue} kr</div>
+          </div>`;
+        }
+
+        reportTagStatsEl.innerHTML = tagCardsHtml;
       }
 
       let html = "";
@@ -4658,18 +4689,46 @@
         `).join("");
       }
 
-      // Interna transaktioner (taggade)
+      // Räkna ej registrerade kvitton i valt tidsintervall
+      const allReceiptsMobile = loadReceipts();
+      const now2m = new Date();
+      const startToday2m = getStartOfToday();
+      const startWeek2m = getStartOfWeek(now2m);
+      const sevenDaysAgo2m = new Date(startToday2m);
+      sevenDaysAgo2m.setDate(sevenDaysAgo2m.getDate() - 6);
+      const mobileMode = mode === "week" ? "thisWeek" : mode === "month" ? "7days" : mode;
+      const unregMobile = allReceiptsMobile.filter(r => {
+        if (r.status !== "ej_registrerad") return false;
+        const d = new Date(r.time);
+        if (Number.isNaN(d.getTime())) return false;
+        if (mobileMode === "7days") return d >= sevenDaysAgo2m;
+        if (mobileMode === "thisWeek") return d >= startWeek2m;
+        return true;
+      });
+      const unregCountM = unregMobile.length;
+      const unregValueM = unregMobile.reduce((s, r) => s + Number(r.total || 0), 0);
+      const unregItemsM = unregMobile.reduce((s, r) => s + (r.items || []).reduce((a, i) => a + Number(i.qty || 0), 0), 0);
+
+      // Tagg-kort + ej registrerade kort
       let tagHtml = "";
-      if (taggedTransactions > 0) {
-        tagHtml += `<div style="border-top:1px solid rgba(255,255,255,.08);padding-top:12px;margin-top:4px;margin-bottom:12px;">
-          <div style="font-size:13px;color:rgba(255,255,255,.4);letter-spacing:1px;margin-bottom:8px;">INTERNA TRANSAKTIONER</div>`;
+      const hasTagsOrUnreg = taggedTransactions > 0 || unregCountM > 0;
+      if (hasTagsOrUnreg) {
+        tagHtml += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">`;
         Object.values(tags).forEach(t => {
           if (t.count > 0) {
-            tagHtml += `<div class="mav-card" style="border-color:${t.def.border};">
-              <div style="color:${t.def.color};font-weight:700;">${t.def.emoji} ${escapeHtml(t.def.label)} — ${t.count} st / −${t.total} kr</div>
+            const tagItems = t.items.reduce((s, i) => s + Number(i.qty || 0), 0);
+            tagHtml += `<div class="mav-card" style="border-color:${t.def.border};background:${t.def.bg};padding:10px;">
+              <div style="color:${t.def.color};font-weight:700;font-size:13px;">${t.def.emoji} ${escapeHtml(t.def.label)}</div>
+              <div style="color:${t.def.color};font-size:15px;margin-top:4px;">${t.count} st / ${tagItems} art / −${t.total} kr</div>
             </div>`;
           }
         });
+        if (unregCountM > 0) {
+          tagHtml += `<div class="mav-card" style="border-color:rgba(251,191,36,.3);background:rgba(251,191,36,.05);padding:10px;">
+            <div style="color:#fbbf24;font-weight:700;font-size:13px;">⚠️ Ej registrerade</div>
+            <div style="color:#fbbf24;font-size:15px;margin-top:4px;">${unregCountM} st / ${unregItemsM} art / ${unregValueM} kr</div>
+          </div>`;
+        }
         tagHtml += `</div>`;
       }
 
@@ -4678,9 +4737,9 @@
           ${modeButtons}
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px;">
-          <div class="mav-stat"><div class="mav-stat-label">KÖPT</div><div class="mav-stat-value">${Math.max(0, netTransactions)}</div></div>
-          <div class="mav-stat"><div class="mav-stat-label">ARTIKLAR</div><div class="mav-stat-value">${Math.max(0, netItems)}</div></div>
-          <div class="mav-stat"><div class="mav-stat-label">TOTALT</div><div class="mav-stat-value">${formatKr(Math.max(0, netValue))}</div></div>
+          <div class="mav-stat" style="border:1px solid rgba(52,211,153,.3);background:rgba(52,211,153,.05);"><div class="mav-stat-label" style="color:#34d399;">KÖPT</div><div class="mav-stat-value" style="color:#34d399;">${Math.max(0, netTransactions)}</div></div>
+          <div class="mav-stat" style="border:1px solid rgba(52,211,153,.3);background:rgba(52,211,153,.05);"><div class="mav-stat-label" style="color:#34d399;">ARTIKLAR</div><div class="mav-stat-value" style="color:#34d399;">${Math.max(0, netItems)}</div></div>
+          <div class="mav-stat" style="border:1px solid rgba(52,211,153,.3);background:rgba(52,211,153,.05);"><div class="mav-stat-label" style="color:#34d399;">TOTALT</div><div class="mav-stat-value" style="color:#34d399;">${formatKr(Math.max(0, netValue))}</div></div>
         </div>
         ${tagHtml}
         ${catHtml}
