@@ -4,6 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Zivert Holms hörna</title>
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#f5a623" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="ZH Kiosk" />
   <style>
     :root {
       --bg: linear-gradient(135deg,#0f0c29,#302b63,#24243e);
@@ -1300,12 +1305,200 @@
       font-style: italic;
     }
 
+    /* ── Mobile view styles ── */
+    .mobile-cat-card {
+      border-radius: 16px;
+      padding: 24px 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      border: 1px solid rgba(255,255,255,.1);
+      transition: transform .15s, box-shadow .15s;
+      text-align: center;
+    }
+    .mobile-cat-card:active {
+      transform: scale(.96);
+    }
+    .mobile-cat-card .mobile-cat-emoji {
+      font-size: 36px;
+    }
+    .mobile-cat-card .mobile-cat-name {
+      font-size: 17px;
+      font-style: italic;
+      color: #fff;
+      text-transform: capitalize;
+    }
+    .mobile-cat-card .mobile-cat-count {
+      font-size: 12px;
+      color: rgba(255,255,255,.5);
+      letter-spacing: 1px;
+    }
+
+    .mobile-product-card {
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 16px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      cursor: default;
+    }
+    .mobile-product-img {
+      width: 100%;
+      height: 120px;
+      object-fit: cover;
+      background: rgba(255,255,255,.04);
+    }
+    .mobile-product-info {
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      flex: 1;
+    }
+    .mobile-product-name {
+      font-size: 15px;
+      font-style: italic;
+      color: #fff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .mobile-product-price {
+      font-size: 20px;
+      font-weight: 700;
+      color: #ffd966;
+    }
+    .mobile-product-note {
+      font-size: 11px;
+      color: rgba(255,255,255,.4);
+      margin-top: 2px;
+    }
+
+    .mobile-offer-card {
+      background: linear-gradient(135deg, rgba(108,99,255,.2), rgba(59,130,246,.15));
+      border: 1px solid rgba(108,99,255,.3);
+      border-radius: 14px;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .mobile-offer-pill {
+      background: rgba(108,99,255,.3);
+      color: #a78bfa;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      border-radius: 20px;
+      padding: 4px 12px;
+      white-space: nowrap;
+    }
+
+    /* ── Admin hamburger (mobile responsive) ── */
+    .admin-hamburger-btn {
+      display: none;
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 8px;
+      color: #fff;
+      font-size: 22px;
+      padding: 4px 10px;
+      cursor: pointer;
+      line-height: 1;
+    }
+    @media (max-width: 768px) {
+      .admin-hamburger-btn { display: block; }
+      .admin-body { flex-direction: column !important; }
+      .admin-nav {
+        position: fixed !important;
+        top: 0; left: 0;
+        width: 260px !important;
+        height: 100vh !important;
+        max-height: 100vh !important;
+        background: linear-gradient(180deg,#1e1b3a,#2d2b50) !important;
+        z-index: 200;
+        transform: translateX(-100%);
+        transition: transform .25s ease;
+        overflow-y: auto !important;
+        flex-direction: column !important;
+        padding-top: 16px !important;
+        border-right: 1px solid rgba(255,255,255,.12) !important;
+      }
+      .admin-nav.mobile-nav-open {
+        transform: translateX(0);
+      }
+      .admin-nav-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,.5);
+        z-index: 199;
+      }
+      .admin-nav-overlay.active {
+        display: block;
+      }
+      .admin-content { width: 100% !important; }
+    }
+
   </style>
 </head>
 <body>
   <div class="viewport">
     <div class="stage" id="stage">
       <div class="app">
+
+        <!-- MOBILE APP -->
+        <div id="mobileApp" style="display:none;width:100%;min-height:100vh;background:linear-gradient(135deg,#0f0c29,#302b63,#24243e);font-family:Georgia,serif;color:#fff;">
+
+          <!-- MOBIL HEADER -->
+          <div style="background:rgba(0,0,0,.5);backdrop-filter:blur(10px);padding:16px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;border-bottom:1px solid rgba(255,255,255,.08);">
+            <div id="mobileLogoTrigger" style="font-size:24px;font-style:italic;color:#fff;cursor:pointer;user-select:none;">
+              ZH
+            </div>
+            <div style="font-size:13px;color:rgba(255,255,255,.5);letter-spacing:1px;">ZIVERT HOLMS HÖRNA</div>
+            <div style="width:40px;"></div>
+          </div>
+
+          <!-- MOBIL STARTSIDA -->
+          <div id="mobileOverview" style="padding:20px;">
+            <div style="margin-bottom:24px;">
+              <h1 style="font-size:32px;font-style:italic;color:#fff;margin:0 0 6px;">Vad tar du idag?</h1>
+              <p style="font-size:13px;color:rgba(255,255,255,.5);letter-spacing:1px;margin:0;">BLÄDDRA I UTBUDET</p>
+            </div>
+
+            <!-- Erbjudanden -->
+            <div id="mobileOffers" style="display:grid;gap:10px;margin-bottom:24px;"></div>
+
+            <!-- Kategorikort -->
+            <div id="mobileCatGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;"></div>
+          </div>
+
+          <!-- MOBIL KATEGORIVY -->
+          <div id="mobileCategoryView" style="display:none;padding:20px;">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+              <button id="mobileBackBtn" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:10px;color:#fff;font-family:Georgia,serif;font-size:16px;padding:8px 16px;cursor:pointer;">← Tillbaka</button>
+              <h2 id="mobileCatTitle" style="font-size:26px;font-style:italic;color:#fff;margin:0;"></h2>
+            </div>
+            <div id="mobileProductGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;"></div>
+          </div>
+
+          <!-- MOBIL ADMIN-TRIGGER OVERLAY -->
+          <div id="mobileAdminOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;align-items:center;justify-content:center;">
+            <div style="background:linear-gradient(160deg,#1e1b3a,#2d2b50);border:1px solid rgba(255,255,255,.12);border-radius:22px;padding:28px;width:320px;display:flex;flex-direction:column;gap:16px;">
+              <div style="font-size:26px;font-style:italic;color:#fff;text-align:center;">Admin</div>
+              <input class="catalog-input" type="password" id="mobileAdminPwInput" placeholder="Lösenord" autocomplete="off" />
+              <div style="font-size:14px;color:#f87171;min-height:18px;text-align:center;" id="mobileAdminPwError"></div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                <button style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:10px;color:#fff;font-family:Georgia,serif;font-size:16px;padding:10px;cursor:pointer;" id="mobileAdminCancelBtn">Avbryt</button>
+                <button style="background:linear-gradient(135deg,#6c63ff,#3b82f6);border:none;border-radius:10px;color:#fff;font-family:Georgia,serif;font-size:16px;font-weight:700;padding:10px;cursor:pointer;" id="mobileAdminConfirmBtn">Logga in</button>
+              </div>
+            </div>
+          </div>
+
+        </div>
 
         <!-- Orbs -->
         <div class="orb orb1"></div>
@@ -1359,9 +1552,11 @@
             <section class="view" id="reportView">
               <div class="admin-shell">
                 <div class="admin-top-bar">
+                  <button class="admin-hamburger-btn" id="adminHamburgerBtn" type="button">☰</button>
                   <span class="admin-top-bar-title">⚙ Adminpanel</span>
                   <button class="admin-logout-btn" id="reportLogoutBtn" type="button">Logga ut</button>
                 </div>
+                <div class="admin-nav-overlay" id="adminNavOverlay"></div>
                 <div class="admin-body">
                   <!-- Nav -->
                   <nav class="admin-nav">
@@ -1516,6 +1711,13 @@
                             <div style="font-size:14px;color:rgba(255,255,255,.6);margin-bottom:10px;letter-spacing:1px;">KVITTO-LÖSENORD</div>
                             <div style="font-size:12px;color:rgba(255,255,255,.35);margin-bottom:10px;">Används för att tagga/avtagga kvitton som TEST.</div>
                             <button class="catalog-small-btn" id="changeReceiptPwBtn" type="button" style="width:100%;font-size:16px;padding:10px;">Byt kvittolösenord</button>
+                          </div>
+
+                          <!-- Mobil admin-lösenord -->
+                          <div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:14px;">
+                            <div style="font-size:14px;color:rgba(255,255,255,.6);margin-bottom:10px;letter-spacing:1px;">MOBIL ADMIN-LÖSENORD</div>
+                            <div style="font-size:12px;color:rgba(255,255,255,.35);margin-bottom:10px;">Lösenord för att komma åt admin via mobilvy (5 tryck på loggan).</div>
+                            <button class="catalog-small-btn" id="changeMobileAdminPwBtn" type="button" style="width:100%;font-size:16px;padding:10px;">Byt mobilt adminlösenord</button>
                           </div>
                         </div>
 
@@ -1814,6 +2016,13 @@
     const RECEIPT_DELETE_PASSWORD_KEY = "zivert-holm-receipt-delete-pw-v1";
     const DEFAULT_RECEIPT_DELETE_PASSWORD = "072940";
     const TAGS_STORAGE_KEY = "zivert-holm-tags-v1";
+    const MOBILE_ADMIN_PW_KEY = "zivert-holm-mobile-admin-pw-v1";
+    const DEFAULT_MOBILE_ADMIN_PW = "123456";
+    const IS_MOBILE_VIEW = new URLSearchParams(window.location.search).has("mobile") || window.innerWidth < 768;
+
+    function getMobileAdminPassword() {
+      return localStorage.getItem(MOBILE_ADMIN_PW_KEY) || DEFAULT_MOBILE_ADMIN_PW;
+    }
 
     const DEFAULT_TAGS = [
       { id: "TEST",             label: "TEST",              color: "#ffd966", bg: "rgba(255,180,0,.2)",  border: "rgba(255,180,0,.3)",  emoji: "🧪" },
@@ -2883,6 +3092,7 @@
 
     document.getElementById("changeAdminPwBtn").addEventListener("click", () => openChangePwModal("admin"));
     document.getElementById("changeReceiptPwBtn").addEventListener("click", () => openChangePwModal("receipt"));
+    document.getElementById("changeMobileAdminPwBtn").addEventListener("click", () => openChangePwModal("mobileAdmin"));
     document.getElementById("changePwCancelBtn").addEventListener("click", () => {
       document.getElementById("changePwModal").style.display = "none";
     });
@@ -2905,6 +3115,12 @@
         const s = loadSettings();
         s.password = newPw;
         saveSettings(s);
+      } else if (changePwTarget === "mobileAdmin") {
+        if (current !== getMobileAdminPassword()) {
+          errorEl.textContent = "Fel nuvarande lösenord.";
+          return;
+        }
+        localStorage.setItem(MOBILE_ADMIN_PW_KEY, newPw);
       } else {
         if (current !== getReceiptDeletePassword()) {
           errorEl.textContent = "Fel nuvarande lösenord.";
@@ -2969,6 +3185,22 @@
       if (e.target === reportLoginOverlay) closeReportLogin();
     });
     reportLogoutBtn.addEventListener("click", () => openOverview());
+
+    // Hamburger menu toggle
+    document.getElementById("adminHamburgerBtn").addEventListener("click", () => {
+      document.querySelector(".admin-nav").classList.add("mobile-nav-open");
+      document.getElementById("adminNavOverlay").classList.add("active");
+    });
+    document.getElementById("adminNavOverlay").addEventListener("click", () => {
+      document.querySelector(".admin-nav").classList.remove("mobile-nav-open");
+      document.getElementById("adminNavOverlay").classList.remove("active");
+    });
+    document.querySelectorAll(".anav-item").forEach(item => {
+      item.addEventListener("click", () => {
+        document.querySelector(".admin-nav").classList.remove("mobile-nav-open");
+        document.getElementById("adminNavOverlay").classList.remove("active");
+      });
+    });
     report7DaysBtn.addEventListener("click",     () => renderReport("7days"));
     reportThisWeekBtn.addEventListener("click",  () => renderReport("thisWeek"));
     reportAllBtn.addEventListener("click",       () => renderReport("all"));
@@ -3601,12 +3833,142 @@
       if (e.key === "Escape") closeGlobalModal(null);
     });
 
+    /* ── Mobile view ── */
+    let mobileTapCount = 0;
+    let mobileTapTimer = null;
+
+    function initMobileView() {
+      document.getElementById("mobileApp").style.display = "block";
+      document.querySelector(".viewport").style.display = "none";
+      document.body.style.overflow = "auto";
+      document.body.style.background = "linear-gradient(135deg,#0f0c29,#302b63,#24243e)";
+      renderMobileOverview();
+      renderMobileOffers();
+
+      // 5-tap admin trigger
+      document.getElementById("mobileLogoTrigger").addEventListener("click", () => {
+        mobileTapCount++;
+        clearTimeout(mobileTapTimer);
+        mobileTapTimer = setTimeout(() => { mobileTapCount = 0; }, 1500);
+        if (mobileTapCount >= 5) {
+          mobileTapCount = 0;
+          document.getElementById("mobileAdminOverlay").style.display = "flex";
+          document.getElementById("mobileAdminPwInput").value = "";
+          document.getElementById("mobileAdminPwError").textContent = "";
+          document.getElementById("mobileAdminPwInput").focus();
+        }
+      });
+
+      // Mobile admin cancel
+      document.getElementById("mobileAdminCancelBtn").addEventListener("click", () => {
+        document.getElementById("mobileAdminOverlay").style.display = "none";
+      });
+
+      // Mobile admin confirm
+      document.getElementById("mobileAdminConfirmBtn").addEventListener("click", () => {
+        const pw = document.getElementById("mobileAdminPwInput").value;
+        if (pw === getMobileAdminPassword()) {
+          document.getElementById("mobileAdminOverlay").style.display = "none";
+          document.getElementById("mobileApp").style.display = "none";
+          document.querySelector(".viewport").style.display = "flex";
+          document.body.style.overflow = "hidden";
+          fitStage();
+          cleanupQtyState();
+          renderOverview();
+          renderSummary();
+          openOverview();
+          openReport();
+        } else {
+          document.getElementById("mobileAdminPwError").textContent = "Fel lösenord";
+        }
+      });
+
+      // Mobile admin pw input enter key
+      document.getElementById("mobileAdminPwInput").addEventListener("keydown", (e) => {
+        if (e.key === "Enter") document.getElementById("mobileAdminConfirmBtn").click();
+      });
+
+      // Mobile back button
+      document.getElementById("mobileBackBtn").addEventListener("click", () => {
+        document.getElementById("mobileCategoryView").style.display = "none";
+        document.getElementById("mobileOverview").style.display = "block";
+      });
+    }
+
+    function renderMobileOffers() {
+      const offers = loadOffers();
+      const container = document.getElementById("mobileOffers");
+      container.innerHTML = offers.filter(o => o.title).map(o => `
+        <div class="mobile-offer-card">
+          <div>
+            <div style="font-size:16px;font-style:italic;color:#fff;">${o.title}</div>
+            <div style="font-size:12px;color:rgba(255,255,255,.5);margin-top:2px;">${o.desc || ""}</div>
+          </div>
+          ${o.price ? `<div class="mobile-offer-pill">${o.price}</div>` : ""}
+        </div>
+      `).join("");
+    }
+
+    function renderMobileOverview() {
+      const cats = loadCatalog();
+      const container = document.getElementById("mobileCatGrid");
+      container.innerHTML = cats.map(cat => {
+        const emoji = CATEGORY_EMOJI[cat.key] || "🛍";
+        const gradient = CATEGORY_GRADIENTS[cat.key] || "linear-gradient(160deg,#444,#222)";
+        const count = cat.items ? cat.items.length : 0;
+        return `
+          <div class="mobile-cat-card" data-cat="${cat.key}" style="background:${gradient};">
+            <span class="mobile-cat-emoji">${emoji}</span>
+            <span class="mobile-cat-name">${cat.title || cat.key}</span>
+            <span class="mobile-cat-count">${count} produkter</span>
+          </div>
+        `;
+      }).join("");
+
+      container.querySelectorAll(".mobile-cat-card").forEach(card => {
+        card.addEventListener("click", () => openMobileCategory(card.dataset.cat));
+      });
+    }
+
+    function openMobileCategory(catKey) {
+      const cats = loadCatalog();
+      const cat = cats.find(c => c.key === catKey);
+      if (!cat) return;
+
+      const emoji = CATEGORY_EMOJI[catKey] || "🛍";
+      document.getElementById("mobileCatTitle").textContent = emoji + " " + (cat.title || catKey);
+      document.getElementById("mobileOverview").style.display = "none";
+      document.getElementById("mobileCategoryView").style.display = "block";
+
+      const grid = document.getElementById("mobileProductGrid");
+      grid.innerHTML = cat.items.map(item => {
+        const imgSrc = typeof PRODUCT_IMAGES !== "undefined" && PRODUCT_IMAGES[item.id] ? PRODUCT_IMAGES[item.id] : "";
+        const imgHtml = imgSrc
+          ? `<img class="mobile-product-img" src="${imgSrc}" alt="${item.name}" />`
+          : `<div class="mobile-product-img" style="display:flex;align-items:center;justify-content:center;font-size:36px;">${emoji}</div>`;
+        return `
+          <div class="mobile-product-card">
+            ${imgHtml}
+            <div class="mobile-product-info">
+              <div class="mobile-product-name">${item.name}</div>
+              <div class="mobile-product-price">${item.price} kr</div>
+              ${item.note ? `<div class="mobile-product-note">${item.note}</div>` : ""}
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
     /* ── Bootstrap ── */
     cleanupQtyState();
     renderOverview();
     renderSummary();
     openOverview();
-    fitStage();
+    if (IS_MOBILE_VIEW) {
+      initMobileView();
+    } else {
+      fitStage();
+    }
   })();
   </script>
 </body>
