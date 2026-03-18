@@ -2407,9 +2407,11 @@
     let _fbReady = false;
     let _fbSyncPaused = false; // pause during incoming sync to avoid loops
 
-    function fbWrite(fbPath, data) {
+    async function fbWrite(fbPath, data) {
       if (!window._fbDb || _fbSyncPaused) return;
-      window._fbDb.ref(fbPath).set(data).catch(e => console.warn("Firebase write failed:", fbPath, e));
+      try {
+        await window._fbDb.ref(fbPath).set(data);
+      } catch(e) { console.warn("Firebase write failed:", fbPath, e); }
     }
 
     function fbSyncAfterSave(localStorageKey) {
@@ -2556,8 +2558,53 @@
         if (data.taggar)      localStorage.setItem(TAGS_STORAGE_KEY, JSON.stringify(data.taggar));
         if (data["bubblainställningar"]) localStorage.setItem(BUBBLA_STORAGE_KEY, JSON.stringify(data["bubblainställningar"]));
         if (data["valjKnappInstallningar"]) localStorage.setItem(VAJL_KNAPP_STORAGE_KEY, JSON.stringify(data["valjKnappInstallningar"]));
-        if (data.kvitton && Array.isArray(data.kvitton)) {
-          localStorage.setItem(RECEIPT_STORAGE_KEY, JSON.stringify(data.kvitton));
+        // Synka kvittoräknare
+        if (data.receiptCounter != null) {
+          localStorage.setItem(RECEIPT_COUNTER_KEY, String(data.receiptCounter));
+        }
+        // Synka kvitton — hantera både array och objekt-format
+        if (data.kvitton) {
+          if (Array.isArray(data.kvitton)) {
+            localStorage.setItem(RECEIPT_STORAGE_KEY, JSON.stringify(data.kvitton));
+          } else if (typeof data.kvitton === "object") {
+            // Objekt-format: merga in statusändringar och nya kvitton till lokala arrayen
+            const localReceipts = loadReceipts();
+            const fbEntries = Object.values(data.kvitton);
+            fbEntries.forEach(fb => {
+              if (!fb || !fb.kvittoNummer) return;
+              const id = fb.kvittoNummer.split("-").pop(); // "ZH-2026-0003" → "0003"
+              const local = localReceipts.find(r => String(r.id) === id);
+              if (local) {
+                // Uppdatera status och tagg från Firebase
+                if (fb.status) local.status = fb.status;
+                if (fb.tagg !== undefined) { local.tagged = !!fb.tagg; local.tagType = fb.tagg; }
+              } else {
+                // Nytt kvitto från annan enhet — lägg till lokalt
+                localReceipts.push({
+                  id,
+                  status: fb.status || "registrerad",
+                  time: fb.datum ? new Date(fb.datum.split("-").reverse().join("-")).toISOString() : new Date().toISOString(),
+                  datum: fb.datum || "", tid: fb.tid || "",
+                  items: (fb.produkter || []).map(p => ({ name: p.namn, qty: p.antal, price: p.prisStyck, sum: p.prisTotal })),
+                  total: fb.totalSumma || 0,
+                  tagged: !!fb.tagg, tagType: fb.tagg || null
+                });
+              }
+            });
+            localStorage.setItem(RECEIPT_STORAGE_KEY, JSON.stringify(localReceipts));
+          }
+        }
+        if (data.installningar) {
+          const s = data.installningar;
+          delete s.password; delete s.adminPassword;
+          // Merga utan att skriva över lokala lösenord
+          try {
+            const localSettings = JSON.parse(localStorage.getItem("zivert-holm-settings-v1") || "{}");
+            const merged = { ...localSettings, ...s };
+            if (localSettings.password) merged.password = localSettings.password;
+            if (localSettings.adminPassword) merged.adminPassword = localSettings.adminPassword;
+            localStorage.setItem("zivert-holm-settings-v1", JSON.stringify(merged));
+          } catch(e) {}
         }
         _fbSyncPaused = false;
 
@@ -2762,12 +2809,25 @@
     }
 
     /* ── Receipt ID ── */
-    function getNextReceiptId() {
+    async function getNextReceiptId() {
       try {
         let current = parseInt(localStorage.getItem(RECEIPT_COUNTER_KEY) || "0");
+        // Hämta senaste från Firebase för att undvika dubbla kvittonummer
+        if (window._fbDb) {
+          try {
+            const snap = await Promise.race([
+              window._fbDb.ref("receiptCounter").once("value"),
+              new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), 2000))
+            ]);
+            if (snap.exists()) {
+              const fbVal = parseInt(snap.val());
+              if (fbVal > current) current = fbVal;
+            }
+          } catch(e) { /* använd lokalt värde vid timeout */ }
+        }
         current = (current >= 1000) ? 1 : current + 1;
         localStorage.setItem(RECEIPT_COUNTER_KEY, String(current));
-        fbWrite("receiptCounter", current);
+        await fbWrite("receiptCounter", current);
         return String(current).padStart(4, "0");
       } catch(e) {
         return "0001";
@@ -3388,7 +3448,7 @@
       const { cart, totalItems, total } = getTotals();
       if (!total) return;
 
-      const receiptId = getNextReceiptId();
+      const receiptId = await getNextReceiptId();
       state.currentReceiptId = receiptId;
       state.currentCart = cart;
 
