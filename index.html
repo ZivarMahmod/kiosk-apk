@@ -3523,6 +3523,12 @@
 
       payOverlay.classList.add("active");
       payOverlay.setAttribute("aria-hidden", "false");
+
+      // Auto-close efter 15 sekunder — kvittot sparas som ej_registrerad
+      if (state.paymentTimer) clearTimeout(state.paymentTimer);
+      state.paymentTimer = setTimeout(() => {
+        closePaymentModal({ recordSaleOnClose: false });
+      }, 15000);
     }
 
     /* ── Sales storage (never touch) ── */
@@ -3582,6 +3588,7 @@
     }
     function closePaymentModal({ recordSaleOnClose = false } = {}) {
       if (recordSaleOnClose) recordSale(getCart());
+      if (state.paymentTimer) clearTimeout(state.paymentTimer);
       payOverlay.classList.remove("active");
       payOverlay.setAttribute("aria-hidden", "true");
       swishQr.innerHTML = "";
