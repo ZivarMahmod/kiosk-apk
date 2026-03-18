@@ -2460,14 +2460,22 @@
         if (data.produkter)       localStorage.setItem(CATALOG_STORAGE_KEY, JSON.stringify(data.produkter));
         if (data.lager)           localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(data.lager));
         if (data.erbjudanden)     localStorage.setItem(OFFERS_STORAGE_KEY, JSON.stringify(data.erbjudanden));
-        if (data.rapport)         localStorage.setItem(SALES_STORAGE_KEY, JSON.stringify(data.rapport));
+        if (data.rapport) {
+          const r = data.rapport;
+          localStorage.setItem(SALES_STORAGE_KEY, JSON.stringify(Array.isArray(r) ? r : Object.values(r)));
+        }
         if (data.kvitton) {
-          // Firebase kvitton kan vara objekt (nytt format) eller array (gammalt)
           const kvittonData = data.kvitton;
           if (Array.isArray(kvittonData)) {
             localStorage.setItem(RECEIPT_STORAGE_KEY, JSON.stringify(kvittonData));
+          } else if (typeof kvittonData === "object") {
+            // Firebase konverterar arrayer till objekt — konvertera tillbaka
+            // Filtrera bort statusobjekt (t.ex. "ZH-2026-0029": {status: "registrerad"})
+            const entries = Object.values(kvittonData).filter(v => v && v.id);
+            if (entries.length) {
+              localStorage.setItem(RECEIPT_STORAGE_KEY, JSON.stringify(entries));
+            }
           }
-          // Om objekt-format (nytt) — localStorage-arrayen är master, synkas inte tillbaka
         }
         if (data.onskningar)      localStorage.setItem(WISHES_STORAGE_KEY, JSON.stringify(data.onskningar));
         if (data.taggar)          localStorage.setItem(TAGS_STORAGE_KEY, JSON.stringify(data.taggar));
@@ -2553,7 +2561,10 @@
         if (data.produkter)   localStorage.setItem(CATALOG_STORAGE_KEY, JSON.stringify(data.produkter));
         if (data.lager)       localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(data.lager));
         if (data.erbjudanden) localStorage.setItem(OFFERS_STORAGE_KEY, JSON.stringify(data.erbjudanden));
-        if (data.rapport)     localStorage.setItem(SALES_STORAGE_KEY, JSON.stringify(data.rapport));
+        if (data.rapport) {
+          const r = data.rapport;
+          localStorage.setItem(SALES_STORAGE_KEY, JSON.stringify(Array.isArray(r) ? r : Object.values(r)));
+        }
         if (data.onskningar)  localStorage.setItem(WISHES_STORAGE_KEY, JSON.stringify(data.onskningar));
         if (data.taggar)      localStorage.setItem(TAGS_STORAGE_KEY, JSON.stringify(data.taggar));
         if (data["bubblainställningar"]) localStorage.setItem(BUBBLA_STORAGE_KEY, JSON.stringify(data["bubblainställningar"]));
