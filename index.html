@@ -6081,6 +6081,7 @@
               if (!r) return;
               r.status = "registrerad";
               localStorage.setItem(RECEIPT_STORAGE_KEY, JSON.stringify(receipts));
+              fbSyncAfterSave(RECEIPT_STORAGE_KEY);
               recordSale(r.items.map(i => ({ ...i, categoryKey: i.categoryKey || "", categoryTitle: i.categoryTitle || "", itemId: i.itemId || "", sum: i.sum || i.qty * i.price })));
               if (window._fbDb && !_fbSyncPaused) {
                 const year = new Date(r.time).getFullYear();
