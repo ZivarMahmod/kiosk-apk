@@ -2457,6 +2457,14 @@
         if (!snap.exists()) return false; // empty DB → will migrate
         const data = snap.val();
         _fbSyncPaused = true;
+
+        // Om receiptCounter är 0 eller saknas (fresh start) — rensa gammal lokal data
+        if (!data.receiptCounter || data.receiptCounter === 0) {
+          localStorage.removeItem(RECEIPT_STORAGE_KEY);
+          localStorage.removeItem(SALES_STORAGE_KEY);
+          localStorage.setItem(RECEIPT_COUNTER_KEY, "0");
+          console.log("Fresh start detected — local receipts and sales cleared.");
+        }
         if (data.produkter)       localStorage.setItem(CATALOG_STORAGE_KEY, JSON.stringify(data.produkter));
         if (data.lager)           localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(data.lager));
         if (data.erbjudanden)     localStorage.setItem(OFFERS_STORAGE_KEY, JSON.stringify(data.erbjudanden));
