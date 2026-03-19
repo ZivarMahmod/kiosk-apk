@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Zivert Holms hörna</title>
+  <title>APK-kiosk</title>
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#f5a623" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -2339,22 +2339,8 @@
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-  <!-- Firebase SDK (compat) -->
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
-  <script>
-    /* ── Firebase init ── */
-    const _firebaseApp = firebase.initializeApp({
-      apiKey: "AIzaSyCjLMN3qVOyn0M5Eu7P0EtA9rnqzAto5Zw",
-      authDomain: "zivert-holm.firebaseapp.com",
-      databaseURL: "https://zivert-holm-default-rtdb.europe-west1.firebasedatabase.app",
-      projectId: "zivert-holm",
-      messagingSenderId: "1078871076184",
-      appId: "1:1078871076184:web:573fc9d2d7ddb621fa892d"
-    });
-    const _fbDb = firebase.database();
-    window._fbDb = _fbDb;
-  </script>
+  <!-- Firebase bortkopplad — ny databas kopplas in senare -->
+  <!-- window._fbDb är undefined → alla fb*-funktioner gör ingenting (no-op) -->
 
   <script>
   (() => {
