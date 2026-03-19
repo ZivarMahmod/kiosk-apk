@@ -1,9 +1,11 @@
 {
   "appId": "com.zivertholm.kiosk",
   "appName": "Zivert Kiosk",
-  "webDir": ".",
+  "webDir": "www",
   "server": {
-    "androidScheme": "https"
+    "androidScheme": "https",
+    "url": "https://zivarmahmod.github.io/kiosk-apk/",
+    "cleartext": true
   },
   "android": {
     "allowMixedContent": true
