@@ -1,0 +1,11 @@
+{
+  "appId": "com.zivertholm.kiosk",
+  "appName": "Zivert Kiosk",
+  "webDir": ".",
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "allowMixedContent": true
+  }
+}
