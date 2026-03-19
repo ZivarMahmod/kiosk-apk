@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Zivert Kiosk</string>
+    <string name="title_activity_main">Zivert Kiosk</string>
+    <string name="package_name">com.zivertholm.kiosk</string>
+    <string name="custom_url_scheme">com.zivertholm.kiosk</string>
+</resources>

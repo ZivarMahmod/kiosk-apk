@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gh repo:*)",
+      "mcp__Claude_Preview__preview_start",
+      "WebFetch(domain:zivarmahmod.github.io)",
+      "Bash(npx cap:*)",
+      "Bash(cmd /c \"cd /d \"\"C:\\\\Users\\\\Zivar-PC\\\\Desktop\\\\Zivert kiosk APK\"\" && npx cap add android 2>&1\")",
+      "Bash(cmd /c \"dir \"\"C:\\\\Users\\\\Zivar-PC\\\\Desktop\\\\Zivert kiosk APK\"\" /b 2>&1\")",
+      "Bash(./gradlew assembleDebug)",
+      "Bash(JAVA_HOME=\"C:\\\\Program Files\\\\Android\\\\Android Studio\\\\jbr\" ./gradlew assembleDebug)",
+      "mcp__mcp-registry__search_mcp_registry",
+      "Bash(node sync-web.js)",
+      "Bash(cmd /c \"cd /d \"\"C:\\\\Users\\\\Zivar-PC\\\\Desktop\\\\Zivert kiosk APK\"\" && node sync-web.js && echo SYNC_DONE\")",
+      "Bash(\"/c/Program Files/nodejs/node.exe\" \"C:\\\\Users\\\\Zivar-PC\\\\Desktop\\\\Zivert kiosk APK\\\\sync-web.js\")",
+      "Bash(JAVA_HOME=\"C:\\\\Program Files\\\\Android\\\\Android Studio\\\\jbr\" \"/c/Program Files/nodejs/node.exe\" node_modules/.bin/cap sync android)",
+      "Bash(JAVA_HOME=\"C:\\\\Program Files\\\\Android\\\\Android Studio\\\\jbr\" \"/c/Program Files/nodejs/node.exe\" node_modules/@capacitor/cli/bin/capacitor sync android)"
+    ]
+  }
+}

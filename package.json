@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "Zivert kiosk APK",
   "private": true,
+  "scripts": {
+    "sync": "node sync-web.js && npx cap sync android"
+  },
   "dependencies": {
     "@capacitor/android": "^6.0.0",
     "@capacitor/cli": "^6.0.0",
