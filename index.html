@@ -5921,14 +5921,21 @@
       // Bygg Swish deep link
       const message = buildSwishMessage(totalItems, receiptId);
       const num = getEffectiveSwishNumber();
-      const swishUrl = `swish://payment?data=${encodeURIComponent(JSON.stringify({
+      const swishData = JSON.stringify({
         payee: { value: num, editable: false },
         amount: { value: total, editable: false },
         message: { value: message, editable: false }
-      }))}`;
+      });
+      const swishUrl = `swish://payment?data=${encodeURIComponent(swishData)}`;
 
       document.getElementById("mcoSwishBtn").onclick = () => {
-        window.location.href = swishUrl;
+        // Öppna via anchor-element — fungerar bättre i WebView än window.location
+        const a = document.createElement("a");
+        a.href = swishUrl;
+        a.style.display = "none";
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => document.body.removeChild(a), 200);
         // Visa bekräftelseknapp efter att Swish öppnats
         setTimeout(() => {
           document.getElementById("mcoHint").textContent = "Betalade du i Swish? Tryck bekräfta för att spara kvittot.";
