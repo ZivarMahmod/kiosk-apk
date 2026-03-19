@@ -1989,10 +1989,21 @@
     <!-- MOBIL BETALNING -->
     <div id="mobileCheckoutOverlay" style="display:none;">
       <div class="mco-sheet">
-        <div class="mco-title">Betala</div>
+        <div class="mco-title">Betala med Swish</div>
         <div class="mco-amount" id="mcoAmount">0 kr</div>
-        <div class="mco-hint" id="mcoHint">Tryck på knappen nedan för att öppna Swish.</div>
-        <button class="mco-swish-btn" id="mcoSwishBtn">💳 Betala med Swish</button>
+        <!-- Betalinfo-ruta -->
+        <div style="background:#f0f7f4;border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:10px;font-family:Georgia,serif;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-size:13px;color:#6b7c74;text-transform:uppercase;letter-spacing:1px;">Swish-nummer</span>
+            <span style="font-size:18px;font-weight:700;color:#2c3e35;" id="mcoNumber">—</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-size:13px;color:#6b7c74;text-transform:uppercase;letter-spacing:1px;">Meddelande</span>
+            <span style="font-size:14px;color:#2c3e35;text-align:right;max-width:60%;" id="mcoMessage">—</span>
+          </div>
+        </div>
+        <div class="mco-hint" id="mcoHint">Öppna Swish, ange numret ovan och bekräfta sedan här.</div>
+        <button class="mco-swish-btn" id="mcoSwishBtn">💳 Öppna Swish</button>
         <button class="mco-confirm-btn" id="mcoConfirmBtn" style="display:none;">✓ Jag har betalat — visa kvitto</button>
         <button class="mco-cancel-btn" id="mcoCancelBtn">Avbryt</button>
       </div>
@@ -5913,30 +5924,21 @@
         localStorage.setItem(RECEIPT_STORAGE_KEY, JSON.stringify(receipts));
       }
 
+      const message = buildSwishMessage(totalItems, receiptId);
+      const num = getEffectiveSwishNumber();
+
       document.getElementById("mcoAmount").textContent = `${total} kr`;
-      document.getElementById("mcoHint").textContent = "Tryck på knappen nedan för att öppna Swish.";
+      document.getElementById("mcoNumber").textContent = num;
+      document.getElementById("mcoMessage").textContent = message;
+      document.getElementById("mcoHint").textContent = "Öppna Swish, ange numret ovan och bekräfta sedan här.";
       document.getElementById("mcoConfirmBtn").style.display = "none";
       document.getElementById("mcoSwishBtn").style.display = "block";
 
-      // Bygg Swish deep link
-      const message = buildSwishMessage(totalItems, receiptId);
-      const num = getEffectiveSwishNumber();
-      const swishData = JSON.stringify({
-        payee: { value: num, editable: false },
-        amount: { value: total, editable: false },
-        message: { value: message, editable: false }
-      });
-      const swishUrl = `swish://payment?data=${encodeURIComponent(swishData)}`;
+      // Försök öppna Swish direkt — fungerar på de flesta Android-enheter
+      const swishUrl = `swish://`;
 
       document.getElementById("mcoSwishBtn").onclick = () => {
-        // Öppna via anchor-element — fungerar bättre i WebView än window.location
-        const a = document.createElement("a");
-        a.href = swishUrl;
-        a.style.display = "none";
-        document.body.appendChild(a);
-        a.click();
-        setTimeout(() => document.body.removeChild(a), 200);
-        // Visa bekräftelseknapp efter att Swish öppnats
+        window.location.href = swishUrl;
         setTimeout(() => {
           document.getElementById("mcoHint").textContent = "Betalade du i Swish? Tryck bekräfta för att spara kvittot.";
           document.getElementById("mcoConfirmBtn").style.display = "block";
